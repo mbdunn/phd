@@ -1,0 +1,107 @@
+\begin{thebibliography}{}
+
+\bibitem[Basedow et~al., 2016]{Basedow2016}
+Basedow, S.~L., De~Silva, N.~A., Bode, A., and Van~Beusekorn, J. (2016).
+\newblock Trophic positions of mesozooplankton across the north atlantic:
+  estimates derived from biovolume spectrum theories and stable isotope
+  analyses.
+\newblock {\em Journal of Plankton Research}, 38(6):1364--1378.
+
+\bibitem[Basedow et~al., 2019]{Basedow2019}
+Basedow, S.~L., McKee, D., Lefering, I., Gislason, A., Daase, M., Trudnowska,
+  E., Egeland, E.~S., Choquet, M., and Falk-Petersen, S. (2019).
+\newblock Remote sensing of zooplankton swarms.
+\newblock {\em Scientific reports}, 9(1):686.
+
+\bibitem[Bassett et~al., 2017]{Bassett2017}
+Bassett, C., De~Robertis, A., and Wilson, C.~D. (2017).
+\newblock Broadband echosounder measurements of the frequency response of
+  fishes and euphausiids in the gulf of alaska.
+\newblock {\em ICES Journal of Marine Science}, 75(3):1131--1142.
+
+\bibitem[Bouchard et~al., 2017]{Bouchard2017}
+Bouchard, C., Geoffroy, M., LeBlanc, M., Majewski, A., Gauthier, S., Walkusz,
+  W., Reist, J.~D., and Fortier, L. (2017).
+\newblock Climate warming enhances polar cod recruitment, at least transiently.
+\newblock {\em Progress in Oceanography}, 156:121--129.
+
+\bibitem[De~Robertis and Higginbottom, 2007]{DeRobertis2007}
+De~Robertis, A. and Higginbottom, I. (2007).
+\newblock A post-processing technique to estimate the signal-to-noise ratio and
+  remove echosounder background noise.
+\newblock {\em ICES Journal of Marine Science}, 64(6):1282--1291.
+
+\bibitem[De~Robertis et~al., 2019]{DeRobertis2019}
+De~Robertis, A., Lawrence-Slavas, N., Jenkins, R., Wangen, I., Mordy, C.~W.,
+  Meinig, C., Levine, M., Peacock, D., and Tabisola, H. (2019).
+\newblock Long-term measurements of fish backscatter from saildrone unmanned
+  surface vehicles and comparison with observations from a noise-reduced
+  research vessel.
+\newblock {\em ICES Journal of Marine Science}.
+
+\bibitem[Dunn, 2019]{Dunn2019}
+Dunn, M. (2019).
+\newblock Developments in fish detection using broadband acoustic doppler
+  current profiler- in review.
+\newblock Master's thesis.
+
+\bibitem[Falk-Petersen et~al., 2015]{Falk-Petersen2015}
+Falk-Petersen, S., Pavlov, V., Berge, J., Cottier, F., Kovacs, K.~M., and
+  Lydersen, C. (2015).
+\newblock At the rainbow’s end: high productivity fueled by winter upwelling
+  along an arctic shelf.
+\newblock {\em Polar Biology}, 38(1):5--11.
+
+\bibitem[Gavin~Macaulay, 2018]{SONARnetCDF}
+Gavin~Macaulay, H.~P. (2018).
+\newblock The sonar-netcdf4 convention for sonar data, version 1.0.
+
+\bibitem[Geoffroy et~al., 2019]{Geoffroy2019}
+Geoffroy, M., Daase, M., Cusa, M., Darnis, G., Graeve, M.,
+  Santana~Hern{\'a}ndez, N., Berge, J., Renaud, P.~E., Cottier, F., and
+  Falk-Petersen, S. (2019).
+\newblock Mesopelagic sound scattering layers of the high arctic: seasonal
+  variations in biomass, species assemblage, and trophic relationships.
+\newblock {\em Frontiers in Marine Science}, 6:1--18.
+
+\bibitem[LeBlanc et~al., 2019]{LeBlanc2019}
+LeBlanc, M., Geoffroy, M., Bouchard, C., Gauthier, S., Majewski, A., Reist,
+  J.~D., and Fortier, L. (2019).
+\newblock Pelagic production and the recruitment of juvenile polar cod
+  boreogadus saida in canadian arctic seas.
+\newblock {\em Polar Biology}, pages 1--12.
+
+\bibitem[Ludvigsen et~al., 2018]{Ludvigsen2018}
+Ludvigsen, M., Berge, J., Geoffroy, M., Cohen, J.~H., Pedro, R., Nornes, S.~M.,
+  Singh, H., S{\o}rensen, A.~J., Daase, M., and Johnsen, G. (2018).
+\newblock Use of an autonomous surface vehicle reveals small-scale diel
+  vertical migrations of zooplankton and susceptibility to light pollution
+  under low solar irradiance.
+\newblock {\em Science advances}, 4(1):eaap9887.
+
+\bibitem[Ona et~al., 2007]{Ona2007}
+Ona, E., God{\o}, O.~R., Handegard, N.~O., Hjellvik, V., Patel, R., and
+  Pedersen, G. (2007).
+\newblock Silent research vessels are not quiet.
+\newblock {\em The Journal of the Acoustical Society of America},
+  121(4):EL145--EL150.
+
+\bibitem[Oziel et~al., 2016]{Oziel2016}
+Oziel, L., Sirven, J., and Gascard, J.-C. (2016).
+\newblock The barents sea frontal zones and water masses variability
+  (1980--2011).
+
+\bibitem[Ringuette et~al., 2002]{Ringuette2002}
+Ringuette, M., Fortier, L., Fortier, M., Runge, J.~A., B{\'e}langer, S.,
+  Larouche, P., Weslawski, J.-M., and Kwasniewski, S. (2002).
+\newblock Advanced recruitment and accelerated population development in arctic
+  calanoid copepods of the north water.
+\newblock {\em Deep Sea Research Part II: Topical Studies in Oceanography},
+  49(22-23):5081--5099.
+
+\bibitem[Sakshaug et~al., 2009]{Sakshaug2009}
+Sakshaug, E., Johnsen, G.~H., and Kovacs, K.~M. (2009).
+\newblock {\em Ecosystem Barents Sea}.
+\newblock Tapir Academic Press.
+
+\end{thebibliography}
