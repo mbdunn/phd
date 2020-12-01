@@ -4,7 +4,7 @@
 import numpy as np
 import pandas as pd
 import array as arr
-
+from scipy.interpolate import UnivariateSpline
 
 
 def read_widebandfrequencyresponse(fname,header = 9, extracols = 1):
@@ -36,13 +36,14 @@ def read_widebandfrequencyresponse(fname,header = 9, extracols = 1):
     return freqs, sv
     
     
-def read_scatteringmodelsimulations(fname,nsim):
+def read_scatteringmodelsimulations(fname,nsim, ve=False):
     """"Opens a file created by R for ZooScatR containing all the information of the model runs. 
     Extract the frequencies, species and cross-sectional backscatter data.
     
     Parameters:
     fname: filename with path of EV export from wideband frequency response plot - graph- export
     nsim: number of simulations
+    ve: whether to use model solutions available from viscous elastic model. Default False.
 
     
     Returns:
@@ -76,5 +77,15 @@ def read_scatteringmodelsimulations(fname,nsim):
         
         for ind_freq in range(0, len(freqs)):
             sigma_bs_all[ind_freq,:,ind_spec] = sim_spec[ind_freq]
+            
+    if ve==True:
+        cod_index = np.where(specs=='FishLarvae')
+        cod_scat = pd.read_csv('CODlarvae.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
+        cod_sigbs_ve = 10**(cod_scat['TS']/10)
+        freqs_ve = cod_scat['frequency']/1000
+        
+        #resample frequency
+        f = UnivariateSpline(freqs_ve,cod_sigbs_ve, k=5)
+        sigma_bs_mean[:,cod_index[0][0]] = f(freqs)
     
     return specs, freqs, sigma_bs_all, sigma_bs_mean
