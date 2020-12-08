@@ -2,5 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
-.ipynb_checkpoints/*.ipynb
+**/.ipynb_checkpoints/*
 ScatteringModels/.ipynb_checkpoints/*.ipynb
+*/.ipynb_checkpoints/*
