@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 import array as arr
 from scipy.interpolate import UnivariateSpline
+import json
 
-
-def read_widebandfrequencyresponse(fname,header = 9, extracols = 1):
+def read_widebandfrequencyresponse(fname,header = 9, extracols = 1, source='Echoview'):
     """"Opens a file created by the wideband frequency response graph 
     export file. Returns a matrix containing the frequency array and 
     the volume backscattering coefficient.
@@ -16,22 +16,37 @@ def read_widebandfrequencyresponse(fname,header = 9, extracols = 1):
     fname: filename with path of EV export from wideband frequency response plot - graph- export
     header: the number of lines in the header information (the default is 9.)
     extracols: The columns without backscatter information. Typically information on fileset. (The default is 1.)
+    source: File export program. LSSS or Echoview (default)
     
     Returns:
     freqs: array of frequencies
     sv: array of volume backscatter coefficient values
     """
-    
-    freq_response_csv = pd.read_csv(fname,header=header)
-    freq_response = freq_response_csv.to_numpy()
-    # Remove fileset column
-    freq_resp = freq_response[:,:-2]
-    
-    #Calculate volume backscatter coefficient.
-    freqs = freq_resp[:,0]
-    sv = 10**(freq_resp[:,1:]/10)
-    
-    freqs = arr.array('d', freqs)
+    if source=='Echoview':
+        freq_response_csv = pd.read_csv(fname,header=header)
+        freq_response = freq_response_csv.to_numpy()
+        # Remove fileset column
+        freq_resp = freq_response[:,:-2]
+        #Calculate volume backscatter coefficient.
+        freqs = freq_resp[:,0]
+        sv = 10**(freq_resp[:,1:]/10)
+        
+    if source=='LSSS':
+        json_file = open(fname)
+        freq_response_lsss = json.load(json_file)
+        ping_lsss = freq_response_lsss['regions'][0]['pings']
+        
+        # Set up frequency array
+        min_freq = ping_lsss[0]['channels'][0]['minFrequency']
+        max_freq = ping_lsss[0]['channels'][0]['maxFrequency']
+        num_freqs = ping_lsss[0]['channels'][0]['numFrequencies']
+        freqs = np.linspace(min_freq,max_freq,num_freqs)
+        Sv = np.zeros([len(freqs), len(ping_lsss)])
+        for ind in range(0,len(ping_lsss)):
+            Sv[:,ind]=ping_lsss[ind]['channels'][0]['sv']
+        sv = 10**(Sv/10)
+        
+
     
     return freqs, sv
     
