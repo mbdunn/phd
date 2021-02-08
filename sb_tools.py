@@ -111,3 +111,23 @@ def bootstrap_interval(simulations, spec, percentiles=(2.5, 97.5), n_boots=100):
         # Save the percentiles of the bootstraped means for the selected frequency
         ci_boot[:,i] = np.percentile(bootstrap_means, percentiles, axis=0)
     return mean, ci_boot
+
+def sv_smooth_ci(sv, N=1):
+    """Extract smoothed median and bootstrap a confidence interval for the mean of columns data with freq and sigmabs.
+    sv: an array with one column for each curve from one continuum of targets
+    N: running mean window. Default N=1.
+    Output is the smoothed median sv and the 95% percentiles fo the sv curves.
+    """
+    # First, calculate mean for each frequency of the whole sample
+    median = np.median(sv, axis=1) # Benoit Bird and Waluk 2020
+    
+    # Running mean, first pad with N values then run
+    median_padded = np.pad(median, (N//2, N-1-N//2), mode='edge')
+    median_smooth = np.convolve(median_padded, np.ones(N)/N, mode='valid')
+    
+    # Calculate 95% CI but what is the "best" method for this data?
+    ci = np.percentile(sv_EV, (2.5, 97.5), axis=1)
+    #ci = np.std(sv,axis=1) * 1.95 / np.sqrt(np.shape(sv_EV)[1])
+    #ci = sns.utils.ci(sv_EV, axis=1)
+
+    return median_smooth, ci
