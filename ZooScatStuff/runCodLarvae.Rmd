@@ -1,0 +1,152 @@
+---
+title: "Running a DWBA simulation ensemble for Cod Larvae in Tromsøflaket"
+author: "Muriel Dunn"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, echo = FALSE, message = FALSE}
+knitr::opts_chunk$set(collapse = T, comment = "#>")
+options(tibble.print_min = 4L, tibble.print_max = 4L)
+library(ZooScatR)
+library(dplyr)
+library (plyr)
+library(reshape2)
+library(ggplot2)
+set.seed(1014)
+```
+This document shows how I used the DWBA model within the ZooScatR package to run model ensembles to calculate the target spectra of Calanus finmarchicus in Tromsøflaket.
+
+## First iteration
+
+I have entered the parameter files for an "average" Calanus finmarchicus in the config_calanusFinCV.dat. Let's check it out to see if it makes sense for TS spectra, backscattering cross-section and TS vs ka (to check for Rayleigh to geometric scattering.)
+```{r fig.width=8,fig.height=4}
+fname <- paste0("/Users/mbd/phd/ZooScatStuff/config_CodLarvae.dat") #Location of the parameters file
+
+para = read_para(fname) #Read parameters file
+#Create list with soundspeed info
+misc <- list(cw=1480)
+#Run DWBA based on config file
+res_TS <- bscat(para=para, misc=misc) #Target strength vs Frequency
+res_TS$rplot #Show the result plot
+
+
+#cross-section vs frequency
+para$simu$out_indx <- 2 #Set output variable to cross section
+#Run DWBA based on config file
+res_sig <- bscat(para=para, misc=misc)
+res_sig$rplot #Show the result plot
+
+#Backscattering amplitude vs ka (Wavenumber x width)
+para$simu$out_indx <- 3 #Set output to Target Strength
+para$simu$var_indx <- 3 #Set output variable to ka
+para$simu$var0 = 0.1 #simulate from ka=0 
+para$simu$var1 = 10 #...to ka=10
+#Run DWBA based on config file
+res <- bscat(para=para, misc=misc)
+res$rplot #Show the result plot
+```
+
+
+```{r output}
+# Change into a table 
+df_TS=data.frame(res_TS$y)
+df_freq=data.frame(res_TS$var)
+
+path <- "my_codlarvae_TS.feather"
+write_feather(df_TS, path)
+
+path <- "my_codlarvae_freq.feather"
+write_feather(df_freq, path)
+```
+
+
+## SIMULATIONS!
+```{r run_sim_auto}
+Species_name = "CodLarvae"
+
+fname <- paste0("/Users/mbd/phd/ZooScatStuff/config_", Species_name, ".dat")
+para = read_para(fname) #Read parameters file
+
+#make a length simulation
+para$shape$ave_flag <- 1
+#make an orientation simulation
+para$orient$ave_flag <- 0
+
+para$simu$var0 = 180 #simulate from 180 
+para$simu$var1 = 450 #...to 450 kHz
+para$simu$ni = 200 #reduce the number of elements and frequencies to improve speed
+para$simu$n = 383
+
+#Create list with sound speed info
+misc <- list(cw=1480)
+
+
+
+res <- bscat(para=para, misc=misc, simOut = TRUE, nang=15, nl=150) #Target strength vs Frequency
+```
+
+
+## Plotting the results
+```{r plots_osim}
+o_sim = melt(res$ysim)
+o_sim$theta = res$ang[o_sim$Var2]
+o_sim$Frequency = res$var[o_sim$Var1]
+o_sim=o_sim[,3:ncol(o_sim)]
+names(o_sim)[1] <- 'TS'
+
+mTS = data.frame(Frequency=res$var,TS=res$y)
+
+ggplot()+geom_line(data=o_sim, aes(x = Frequency, y=TS, group=theta),lty=2, lwd=0.5, alpha=0.4)+
+  geom_line(data=mTS, aes(x=Frequency, y=TS), lty=1, lwd=2)+
+  theme_classic()+
+  theme(text=element_text(size=14))+
+  ggtitle(Species_name)
+
+ggplot(data=o_sim, aes(x=Frequency, y=theta, fill=TS))+
+  geom_raster()+
+  scale_fill_viridis_c()+
+  scale_y_continuous(expand=c(0,0))+
+  scale_x_continuous(expand=c(0,0))+
+  theme_classic()+theme(text=element_text(size=14))+
+  ggtitle(Species_name)
+```  
+
+### Length simulations
+
+```{r plots_L}
+l_sim =  melt(res$ysimL)
+l_sim$Length = res$L[l_sim$Var2]
+l_sim$Frequency = res$var[l_sim$Var1]
+l_sim=l_sim[,3:ncol(l_sim)]
+names(l_sim)[1] <- 'TS'
+
+ggplot()+geom_line(data=l_sim, aes(x = Frequency, y=TS, group=Length),lty=2, lwd=0.5, alpha=0.4)+
+  geom_line(data=mTS, aes(x=Frequency, y=TS), lty=1, lwd=2)+theme_classic()+theme(text=element_text(size=14))+
+  ggtitle(Species_name)
+
+
+
+ggplot(data=l_sim, aes(x=Frequency, y=Length, fill=TS))+
+  geom_raster()+
+  scale_fill_viridis_c()+
+  scale_y_continuous(expand=c(0,0))+
+  scale_x_continuous(expand=c(0,0))+
+  theme_classic()+theme(text=element_text(size=14))+
+  ggtitle(Species_name)
+
+```
+
+
+
+### Confidence Intervals of TS Spectra
+
+
+```{r plots_CI}
+
+
+
+
+```
