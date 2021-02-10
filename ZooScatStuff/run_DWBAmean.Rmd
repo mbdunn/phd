@@ -1,0 +1,352 @@
+---
+title: "TS simulations - ZooScatR"
+author: "Sven Gastauer"
+date: "10/09/2020"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: 'png'
+---
+
+
+```{r setup, warning=FALSE, message=FALSE}
+#tidyverse for cleaner code
+library(tidyr)
+library(dplyr)
+library(purrr)
+#apply with progress
+library(pbapply)
+
+#plotting
+library(ggplot2)
+
+#special libraries
+library(ZooScatR)
+
+#pdf stuff
+library(kableExtra)
+library(knitr)
+
+#exporting results
+library(feather)
+
+#define if simulations should be multi-threadded. THis will run the simulations in parallel using with # cores available -1
+runParallel = TRUE
+if (runParallel == TRUE){
+  library(foreach)
+  library(doParallel)
+  
+  registerDoParallel(parallel::detectCores()-1)
+}
+#force running a new simulation, even if an RDS file with simualtions is available
+force=TRUE
+#set working dir
+setwd('C:\\Users\\mbd\\phd\\ZooScatStuff\\')
+```
+## A priori assumptions  
+
+We assume copepods, two types of euphausiids, chaetognaths and amphipods to be the dominant species groups. For diverse Calanus groups we can use literature values to populate the mode. For cheatognaths, amphipods and euphausiids we use the measurements from local biological sampling
+
+## Model definition  
+
+Let's start by loading some standard values for the model:  
+
+```{r setdir, warning=FALSE, message=FALSE}
+#number of simulations
+nsim = 1000
+#location of the standard parameter file contained within the package
+fname <- paste0(system.file(package="ZooScatR"),"/extdata/configs/config_0.dat")
+# read the parameters file
+para = ZooScatR::read_para(fname)
+#set the soundspeed in the surrounding sea water
+misc <- list(cw=1480)
+#let's set the start and end frequencies
+f0=80 #will bepara$simu$var0
+f1=600 #will be para$simu$var1
+#number of output frequencies
+nf=801 #will be para$simu$n
+```
+
+For the parameter distributions a gamma, normal or uniform dsitribution were used.  
+For gamma distributions a density function with a shape $s$ and a rate $a$ was defined as:
+
+$$f_{\Gamma}(x)= \frac{1}{s^a \Gamma(a) x^{a-1} e^{-\frac{x}{s}}}$$
+where $\Gamma(a)$ is defined as [@milne-thomson_handbook_1972]:  
+ $$\Gamma(a)=\int_0^\infty{t^{a-1}e^{-t} dt}$$
+
+Normal distributions were computed with standard deviation $\sigma$ and mean $\mu$ with a density given by [@johnson_continuous_1995]:
+$$f_N(x)=\frac{1}{\sqrt{2\pi}\sigma e^{-{\frac{(x-\mu)^2}{2\sigma^2}}}}$$
+A summary of the settings is defined in table 1.
+The acoustically-dominant species that are considered weakly scatterers are the ones described in the table below. the table also contains all their parameters space settings. 
+
+```{r model_set, warning=FALSE, message=FALSE}
+pm = data.frame(species=c('Copepod','Krill','Chaetognaths','KrillBig', 'Amphipod', 'Limacina', 'FishLarvae'),
+  L_dist=c('gamma', 'gamma','log normal', 'log normal','gamma', 'gamma', 'gamma'),
+  L_shape =  c(7,    15,     2,     0.85,10,  6.8,   5.0),
+  L_rate =   c(4,     4,   0.4,     0.46, 2,  4.8,   1.3),
+  L_a_dist = c('normal'),
+  L_a_mean = c(2.7,10.5, 17.15, 10.5,     3,  2.5,   8.5),
+  L_a_sd =   c(0.1, 0.1,     1.5,  0.1,     0.5,  0.05,   1),
+  g_dist = 'uniform',
+  g_min = c(1.025,1.015, 1.029, 1.037,1.056, 1.729, 0.997),
+  g_max = c(1.027,1.017, 1.031, 1.039,1.057, 1.731, 0.999),
+  h_dist = 'uniform',
+  h_min = c(1.026,1.018, 1.029, 1.021,1.025, 1.729, 1.10),
+  h_max = c(1.028,1.020, 1.031, 1.031,1.027, 1.731, 1.12),
+  theta_dist='uniform',
+  theta_mean = c(90, 20,     0,    20,    0,    20,     0),
+  theta_sd =   c(5, 5,    5,    5,   5,    5,    5),
+  rho_l =    c(   3,  3,     3,     3,    13,     3,     3),
+  taper =    c(  4,   5,     2,     5,    15,     2,     2)
+)
+```
+  
+```{r table, echo=FALSE}
+knitr::kable(pm[,1:7], booktabs = T, linesep = "") %>%
+kable_styling(latex_options = "striped")
+
+knitr::kable(pm[,c(1,8:13)], booktabs = T, linesep = "") %>%
+kable_styling(latex_options = "striped")
+
+knitr::kable(pm[,c(1,14:18)], booktabs = T, linesep = "") %>%
+kable_styling(latex_options = "striped")
+
+```
+
+### Define the Model parameters
+
+Now that we have lists of settings we can set those in the parameter files for each species group.  
+
+#### Copepods (Calanus finmarchicus CV)
+
+```{r get_para, warning=FALSE, message=FALSE}
+######################################################################
+#create a get_para funciton
+get_para <- function(pm,spec,fn=-1){
+#length distribution - this is made up...
+if(spec=='krill'){
+  pmsel = pm%>%filter(species=='Euphausiids1')
+  L = c(abs(rnorm(9*nsim/10,3,3)), rnorm(1*nsim/10, 20,4))
+  }else{
+  pmsel = pm%>%filter(species==spec)
+  L = rgamma(nsim,shape=pmsel$L_shape,rate=pmsel$L_rate)
+  }
+  cp = data.frame(species=spec,
+  L=L,
+  La=rnorm(nsim, pmsel$L_a_mean, pmsel$L_a_sd),
+  g=runif(nsim, pmsel$g_min, pmsel$g_max),
+  h=runif(nsim, pmsel$h_min, pmsel$h_max),
+  taper=pmsel$taper,
+  rhol=pmsel$rho_l,
+  pf=fn,
+  theta=rnorm(nsim, pmsel$theta_mean, pmsel$theta_sd))
+  cdf = gather(cp,'var','value',-species,-taper, -rhol,-pf)
+  subtit <- c('L' = "Length~(mm)",
+  'La' = "L/a",
+  'g' ="Density~contrast~g",
+  'h' = 'Sound~speed~contrast~h',
+  'theta' = 'Angle~theta~(degree)' )
+  p <- ggplot(data=cdf, aes(x=value))+
+  geom_density()+
+  facet_wrap(.~var, scales='free')+#, labeller =labeller(var= as_labeller(subtit, label_parsed)))+
+  theme_classic()+
+  ggtitle(paste(spec,'- Material properties - Density plots'))+
+  xlab('')+ylab('')
+  return(list(cp,p))
+}
+##################################################################
+#set copepod settings
+#fn = paste0(system.file(package="ZooScatR"),"/extdata/profiles/copepod0.dat")
+fn = 'cop0.sat'
+cout = get_para(pm, 'Copepod', fn)
+cdf = cout[[1]]
+cout[[2]]
+```
+
+#### Krill (Euphausiacea furcilia)  
+
+```{r eu, warning=FALSE, message=FALSE}
+fn = paste0(system.file(package="ZooScatR"),"/extdata/profiles/euphaus0.dat")
+eout = get_para(pm, 'Krill',fn)
+edf = eout[[1]]
+eout[[2]]
+```
+
+#### Chaetognaths (Eukrohnia hamata)
+
+```{r chaet, warning=FALSE, message=FALSE}
+fn = 'chaeto0.sat'
+chout = get_para(pm, 'Chaetognaths',fn)
+chdf = chout[[1]]
+chout[[2]]
+```
+
+#### Krill Big (thyssanoessa inermis)  
+
+```{r krillbig, warning=FALSE, message=FALSE}
+fn = paste0(system.file(package="ZooScatR"),"/extdata/profiles/euphaus0.dat")
+kbpout = get_para(pm, 'KrillBig',fn)
+kbpdf = kbpout[[1]]
+kbpout[[2]]
+```
+
+#### Amphipod (themisto abyssorum)  
+
+```{r amphi, warning=FALSE, message=FALSE}
+fn = 'amphipod0.sat'
+apout = get_para(pm, 'Amphipod',fn)
+apdf = apout[[1]]
+apout[[2]]
+```
+
+
+#### pteropod (limacina retroversa)  
+
+```{r ptero, warning=FALSE, message=FALSE}
+fn = 'pteropod0.sat'
+lpout = get_para(pm, 'Limacina',fn)
+lpdf = lpout[[1]]
+lpout[[2]]
+```
+
+
+#### fish larvae (cod larvae with swimbladder)  
+
+```{r fishlarv, warning=FALSE, message=FALSE}
+fn = 'pteropod0.sat'
+flpout = get_para(pm, 'FishLarvae',fn)
+flpdf = flpout[[1]]
+flpout[[2]]
+```
+
+### Run the model
+
+Now we can combine all the settings and prepare to run the simulations:
+
+```{r combSettings, warning=FALSE, message=FALSE}
+setdf = do.call('rbind',list(cdf,edf,chdf,kbpdf,apdf,lpdf,flpdf))
+set_para <- function(i, shape=FALSE, setdf=setdf){
+  para = ZooScatR::read_para(fname)
+  #set the soundspeed in the surrounding sea water
+  #misc <- list(cw=1500)
+  #let's set the start and end frequencies
+  para$simu$var0=f0
+  para$simu$var1=f1
+  #number of output frequencies
+  para$simu$n=nf
+  para$shape$L = setdf$L[i]
+  para$shape$L_a = setdf$La[i]
+  para$phy$g0 = setdf$g[i]
+  para$phy$h0 = setdf$h[i]
+  para$shape$order = setdf$taper[i]
+  para$shape$rho_L = setdf$rhol[i]
+  para$shape$prof_name = setdf$pf[i]
+  para$orient$angm = setdf$theta[i]
+  
+  if(shape==FALSE){
+    res = ZooScatR::bscat(para=para, misc=misc) #Target strength vs Frequency
+    tmp=data.frame(TS=res$y,
+    freq=seq(f0,f1, length.out = nf),
+    L=para$shape$L,
+    la=para$shape$L_a,
+    g=para$phy$g0,
+    h=para$phy$h0,
+    orient=para$orient$angm,
+    spec=setdf$species[i])
+    return(tmp)
+    
+  }else{
+    p = buildpos(para)
+    p = p$plot
+    p = p+coord_equal()
+    p = p+ggtitle(setdf$species[i])
+    print(p)
+    return(p)
+  }
+}
+
+```
+
+### Model input shapes
+
+First let’s have a look at the selected shapes:
+
+```{r showShapes, fig.height=4,fig.width=8, warning=FALSE, message=FALSE}
+specp = setdf%>%group_by(species)%>%filter(row_number()==1)
+for(i in 1:length(specp$species)){set_para(i,shape=TRUE, setdf=specp)}
+```
+
+Now we can run the simulations:
+
+```{r runSIm, warning=FALSE, message=FALSE}
+if(force ==FALSE & file.exists('sim2.RDS')){
+  message(Sys.time(), ': Found simulations...Using old simulaitons...')
+  sim = readRDS('sim2.RDS')
+}else{
+message(Sys.time(),': Running simulations...')
+if(runParallel == TRUE){
+sim = foreach(i=1:length(setdf$L), .combine=rbind) %dopar% {set_para(i, shape=FALSE,setdf=setdf)}
+}else{
+sim = do.call('rbind',
+pbapply(matrix(1:length(setdf$L)),1,function(i){set_para(i, shape=FALSE,setdf=setdf)})
+)
+}
+message(Sys.time(),': Running simulations completed!')
+saveRDS(sim, file='sim2.RDS', compress=TRUE)
+}
+```
+  
+Let's have a look at the results.
+
+Let's plot TS grouped by species vs Length:
+  
+```{r fig.width=12, fig.height=12}
+plot_func <- function(sim, name='L (mm)', var='L', y='TS',x='freq', title) {
+  ggplot(data = sim, aes_string(x = x, y = y, col = var)) +
+    geom_point(size=0.01) +
+    scale_colour_viridis_c(name=name)+
+    ggtitle(title)+
+    xlab('Frequency (kHz)')+
+    ylab('TS (dB)')+
+    theme_classic()
+}
+pL <- function(sim,spec){plot_func(sim, name='L (mm)', var='L', y='TS',x='freq', spec)}
+
+sim_tmp <- sim %>% 
+  group_by(spec) %>% 
+  nest() %>% 
+  mutate(plots = map2(data, spec, pL))
+pL = gridExtra::grid.arrange(grobs = sim_tmp$plots)
+```
+
+
+To have a look at the overall distribution, we can also look at 2D density plots:  
+
+```{r fig.width=12, fig.height=12}
+
+pL <- function(sim, title){
+
+  ggplot(data=sim, aes(x=freq, y=TS))+
+    geom_density2d_filled()+
+    #facet_wrap(.~spec, scales='free')+
+    scale_x_continuous(expand=c(0,0))+
+    scale_y_continuous(expand=c(0,0))+
+    ggtitle(title)+
+    theme_classic()
+}
+
+
+sim_tmp <- sim%>% 
+  group_by(spec) %>% 
+  nest() %>% 
+  mutate(plots = map2(data, spec, pL))
+pL = gridExtra::grid.arrange(grobs = sim_tmp$plots)
+```
+
+
+```{r export-feather}
+path <- "my_data.feather"
+write_feather(sim, path)
+
+
+```
