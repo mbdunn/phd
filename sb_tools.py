@@ -126,7 +126,7 @@ def sv_smooth_ci(sv, N=1):
     median_smooth = np.convolve(median_padded, np.ones(N)/N, mode='valid')
     
     # Calculate 95% CI but what is the "best" method for this data?
-    ci = np.percentile(sv_EV, (2.5, 97.5), axis=1)
+    ci = np.percentile(sv, (2.5, 97.5), axis=1)
     #ci = np.std(sv,axis=1) * 1.95 / np.sqrt(np.shape(sv_EV)[1])
     #ci = sns.utils.ci(sv_EV, axis=1)
 
