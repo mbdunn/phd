@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from scipy import interpolate
-from sklearn.utils import resample
 import cmocean
 
     
@@ -78,57 +77,3 @@ def load_bathy(fname_topo):
 
     return X, Y, Z_mask
 
-def bootstrap_interval(simulations, spec, percentiles=(2.5, 97.5), n_boots=100):
-    """Extract mean and bootstrap a confidence interval for the mean of columns data with freq and sigmabs.
-    simulations: dataframe containing all the model runs from scattering models
-    spec: string describing the functional group.
-    Output is the mean and the bootstrap confidence intervals of the mean.
-    """
-    # First, calculate mean for each frequency of the whole sample
-    mean = simulations[simulations.spec==spec].groupby(['freq']).mean()['sigbs']
-    
-    
-    # Resample , calculate mean repeat n_boot times, then calculate the SPREAD of the MEANS.
-    sigbs = simulations.sigbs[simulations.spec==spec]
-    freq = simulations.freq[simulations.spec==spec]
-    freqs = np.unique(freq)
-    
-    # Create our empty array to fill the results
-    ci_boot = np.zeros([2, len(freqs)])
-
-    # Resample over each frequency
-    for i in range(len(freqs)):
-        sigbs_selectfreq = sigbs[freq==freqs[i]]
-
-        # Create our empty array to fill the results              
-        bootstrap_means = np.zeros([n_boots])
-
-        # Resample within the values of the selected frequency and calculate the mean
-        for ii in range(n_boots):
-        # Generate random indices for our data *with* replacement, then take the sample mean
-            random_sample = resample(sigbs_selectfreq)
-            bootstrap_means[ii] = random_sample.mean(axis=0)
-
-        # Save the percentiles of the bootstraped means for the selected frequency
-        ci_boot[:,i] = np.percentile(bootstrap_means, percentiles, axis=0)
-    return mean, ci_boot
-
-def sv_smooth_ci(sv, N=1):
-    """Extract smoothed median and bootstrap a confidence interval for the mean of columns data with freq and sigmabs.
-    sv: an array with one column for each curve from one continuum of targets
-    N: running mean window. Default N=1.
-    Output is the smoothed median sv and the 95% percentiles fo the sv curves.
-    """
-    # First, calculate mean for each frequency of the whole sample
-    median = np.median(sv, axis=1) # Benoit Bird and Waluk 2020
-    
-    # Running mean, first pad with N values then run
-    median_padded = np.pad(median, (N//2, N-1-N//2), mode='edge')
-    median_smooth = np.convolve(median_padded, np.ones(N)/N, mode='valid')
-    
-    # Calculate 95% CI but what is the "best" method for this data?
-    ci = np.percentile(sv, (2.5, 97.5), axis=1)
-    #ci = np.std(sv,axis=1) * 1.95 / np.sqrt(np.shape(sv_EV)[1])
-    #ci = sns.utils.ci(sv_EV, axis=1)
-
-    return median_smooth, ci
