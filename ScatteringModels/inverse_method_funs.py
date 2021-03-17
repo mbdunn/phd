@@ -59,13 +59,14 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
     Parameters:
     fname: filename with path of EV export from wideband frequency response plot - graph- export
     nsim: number of simulations
-    ve: whether to use model solutions available from viscous elastic model. Default False.
+    ve: whether to use model solutions available from viscous elastic model, if species exist in 
+        fname, the sigbsmean is replaced with viscous elastic mean results, else a column is added. Default False. 
 
     
     Returns:
     spec: array of name of species
     freqs: array of frequencies
-    sigma_bs: array of cross-sectional backscatter simulation values shape is [frequencies, simulations, species]
+    sigma_bs_mean: array of mean cross-sectional backscatter simulation values 
     """
     simulations = pd.read_feather(fname)
     # Add a row for sigma_bs calculated from TS
@@ -76,7 +77,6 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
     specs = simulations['spec'].unique()
     
     # Allocate space
-    sigma_bs_all = np.zeros([len(freqs), nsim, len(specs)])
     sigma_bs_mean = np.zeros([len(freqs), len(specs)])
     #Sort values in sibgs column by species and frequencies
     simulations_group = simulations.groupby(["spec","freq"]).agg({'sigbs':lambda x: arr.array('d', x)})
@@ -90,21 +90,39 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
         spec_name = specs[ind_spec]
         sim_spec = np.asarray(simulations_group.sigbs[spec_name])   
         sigma_bs_mean[:,ind_spec] = mean_bs.loc[spec_name].to_numpy()[:,1]
-        
-        for ind_freq in range(0, len(freqs)):
-            sigma_bs_all[ind_freq,:,ind_spec] = sim_spec[ind_freq]
             
     if ve==True:
-        cod_index = np.where(specs=='FishLarvae')
-        cod_scat = pd.read_csv('CODlarvae.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
+        cod_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_CodLarvae.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         cod_sigbs_ve = 10**(cod_scat['TS']/10)
-        freqs_ve = cod_scat['frequency']/1000
         
-        #resample frequency
-        f = UnivariateSpline(freqs_ve,cod_sigbs_ve, k=5)
-        sigma_bs_mean[:,cod_index[0][0]] = f(freqs)
+        lima_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_limacina.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
+        lima_scat['sigbs'] = 10**(lima_scat['TS']/10)
+        lima_sigbs_ve = lima_scat.groupby(["frequency"]).agg({'sigbs':'mean'})
+        freqs_ve = lima_scat['frequency'].unique()/1000
+        
+        #resample frequency and append or replace
+        f = UnivariateSpline(freqs_ve,cod_sigbs_ve, k=3, s=2)
+        if (specs=='FishLarvae').any():
+            cod_index=np.where(specs=='FishLarvae')
+            sigma_bs_mean[:,cod_index[0][0]] = f(freqs)
+        else:
+            sigma_bs_mean = np.vstack((sigma_bs_mean.T,[f(freqs)]))
+            sigma_bs_mean = sigma_bs_mean.T
+            specs = np.append(specs,'FishLarvae')
+            
+        f = UnivariateSpline(freqs_ve,lima_sigbs_ve, k=5)    
+        if (specs=='Limacina').any():
+            lima_index = np.where(specs=='Limacina')
+            sigma_bs_mean[:,lima_index[0][0]] = f(freqs)                
+        else:                    
+            sigma_bs_mean = np.vstack((sigma_bs_mean.T,[f(freqs)]))
+            sigma_bs_mean = sigma_bs_mean.T
+            specs = np.append(specs,'Limacina')            
+            
+                                              
+
     
-    return specs, freqs, sigma_bs_all, sigma_bs_mean
+    return specs, freqs, sigma_bs_mean
 
 def bootstrap_interval(simulations, spec, percentiles=(2.5, 97.5), n_boots=100):
     """Extract mean and bootstrap a confidence interval for the mean of columns data with freq and sigmabs.
