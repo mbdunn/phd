@@ -92,16 +92,19 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
         sigma_bs_mean[:,ind_spec] = mean_bs.loc[spec_name].to_numpy()[:,1]
             
     if ve==True:
-        cod_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_CodLarvae.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
-        cod_sigbs_ve = 10**(cod_scat['TS']/10)
+        cod_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_cod.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
+        cod_scat['sigbs'] = 10**(cod_scat['TS']/10)
+        cod_sigbs_ve = cod_scat.groupby(["frequency"]).agg({'sigbs':'mean'})
+        freqs_cod = cod_scat['frequency'].unique()/1000
         
+        lima_index = np.where(specs=='Limacina')
         lima_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_limacina.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         lima_scat['sigbs'] = 10**(lima_scat['TS']/10)
         lima_sigbs_ve = lima_scat.groupby(["frequency"]).agg({'sigbs':'mean'})
-        freqs_ve = lima_scat['frequency'].unique()/1000
+        freqs_lima = lima_scat['frequency'].unique()/1000
         
         #resample frequency and append or replace
-        f = UnivariateSpline(freqs_ve,cod_sigbs_ve, k=3, s=2)
+        f = UnivariateSpline(freqs_cod,cod_sigbs_ve, k=3, s=2)
         if (specs=='FishLarvae').any():
             cod_index=np.where(specs=='FishLarvae')
             sigma_bs_mean[:,cod_index[0][0]] = f(freqs)
@@ -110,16 +113,14 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
             sigma_bs_mean = sigma_bs_mean.T
             specs = np.append(specs,'FishLarvae')
             
-        f = UnivariateSpline(freqs_ve,lima_sigbs_ve, k=5)    
+        f = UnivariateSpline(freqs_lima,lima_sigbs_ve, k=5)    
         if (specs=='Limacina').any():
             lima_index = np.where(specs=='Limacina')
             sigma_bs_mean[:,lima_index[0][0]] = f(freqs)                
         else:                    
             sigma_bs_mean = np.vstack((sigma_bs_mean.T,[f(freqs)]))
             sigma_bs_mean = sigma_bs_mean.T
-            specs = np.append(specs,'Limacina')            
-            
-                                              
+            specs = np.append(specs,'Limacina')                                         
 
     
     return specs, freqs, sigma_bs_mean
