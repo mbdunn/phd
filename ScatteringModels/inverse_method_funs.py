@@ -7,6 +7,7 @@ import array as arr
 from scipy.interpolate import UnivariateSpline
 from sklearn.utils import resample
 import json
+from datetime import datetime
 
 def read_widebandfrequencyresponse(fname,header = 9, extracols = 1, source='Echoview'):
     """"Opens a file created by the wideband frequency response graph 
@@ -24,13 +25,21 @@ def read_widebandfrequencyresponse(fname,header = 9, extracols = 1, source='Echo
     sv: array of volume backscatter coefficient values
     """
     if source=='Echoview':
-        freq_response_csv = pd.read_csv(fname,header=header)
-        freq_response = freq_response_csv.to_numpy()
-        # Remove fileset column
-        freq_resp = freq_response[:,:-2]
+        wideband_extract = pd.read_csv(fname, header=0, index_col = 0, usecols = np.arange(0,12))
+        data = wideband_extract.T
+        
+        # Extract time
+        times = np.array([])
+        for ind in range(0,len(data)):
+            times = np.append(times, datetime.strptime(str(data['Ping_date'][ind]+ ' ' + data['Ping_time'][ind]), '%Y-%m-%d %H:%M:%S'))
+        
+        # Extract sv and frequencies
+        Sv_resp = data.to_numpy()[:,8:]
+        Sv_resp_array = np.array(Sv_resp, dtype=float)
+
         #Calculate volume backscatter coefficient.
-        freqs = freq_resp[:,0]
-        sv = 10**(freq_resp[:,1:]/10)
+        freqs = np.array(data.columns[8:], dtype=float)
+        sv = 10**(Sv_resp_array.T/10)
         
     if source=='LSSS':
         json_file = open(fname)
@@ -47,9 +56,9 @@ def read_widebandfrequencyresponse(fname,header = 9, extracols = 1, source='Echo
             Sv[:,ind]=ping_lsss[ind]['channels'][0]['sv']
         sv = 10**(Sv/10)
         
-
     
-    return freqs, sv
+    
+    return freqs, sv, times
     
     
 def read_scatteringmodelsimulations(fname,nsim, ve=False):
