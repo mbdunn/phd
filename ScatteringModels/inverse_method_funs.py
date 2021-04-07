@@ -9,7 +9,7 @@ from sklearn.utils import resample
 import json
 from datetime import datetime
 
-def read_widebandfrequencyresponse(fname,header = 9, extracols = 1, source='Echoview'):
+def read_widebandfrequencyresponse(fname, header=0, extracols = 1, source='Echoview'):
     """"Opens a file created by the wideband frequency response graph 
     export file. Returns a matrix containing the frequency array and 
     the volume backscattering coefficient.
@@ -25,21 +25,23 @@ def read_widebandfrequencyresponse(fname,header = 9, extracols = 1, source='Echo
     sv: array of volume backscatter coefficient values
     """
     if source=='Echoview':
-        wideband_extract = pd.read_csv(fname, header=0, index_col = 0, usecols = np.arange(0,12))
+        wideband_extract = pd.read_csv(fname, header=0, index_col = 0)
         data = wideband_extract.T
-        
+
         # Extract time
         times = np.array([])
-        for ind in range(0,len(data)):
-            times = np.append(times, datetime.strptime(str(data['Ping_date'][ind]+ ' ' + data['Ping_time'][ind]), '%Y-%m-%d %H:%M:%S'))
-        
+        ntimes = len(data.index)-2
+        for ind in range(0,ntimes):
+            times = np.append(times, datetime.strptime('%s %s' %(data['Ping_date'][ind],data['Ping_time'][ind]), '%Y-%m-%d %H:%M:%S'))
+
         # Extract sv and frequencies
-        Sv_resp = data.to_numpy()[:,8:]
+        Sv_resp = data.to_numpy()[:-2,8:]
         Sv_resp_array = np.array(Sv_resp, dtype=float)
 
         #Calculate volume backscatter coefficient.
         freqs = np.array(data.columns[8:], dtype=float)
-        sv = 10**(Sv_resp_array.T/10)
+        sv = 10**(Sv_resp_array/10)
+        
         
     if source=='LSSS':
         json_file = open(fname)
