@@ -36,7 +36,7 @@ def read_widebandfrequencyresponse(fname, header=0, extracols = 1, source='Echov
 
         # Extract sv and frequencies
         Sv_resp = data.to_numpy()[:-2,8:]
-        Sv_resp_array = np.array(Sv_resp, dtype=float)
+        Sv_resp_array = np.array(Sv_resp.T, dtype=float)
 
         #Calculate volume backscatter coefficient.
         freqs = np.array(data.columns[8:], dtype=float)
