@@ -108,7 +108,7 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
         cod_sigbs_ve = cod_scat.groupby(["frequency"]).agg({'sigbs':'mean'})
         freqs_cod = cod_scat['frequency'].unique()/1000
         
-        lima_index = np.where(specs=='Limacina')
+        lima_index = np.where(specs=='Pteropod')
         lima_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_limacina.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         lima_scat['sigbs'] = 10**(lima_scat['TS']/10)
         lima_sigbs_ve = lima_scat.groupby(["frequency"]).agg({'sigbs':'mean'})
@@ -126,12 +126,12 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
             
         f = UnivariateSpline(freqs_lima,lima_sigbs_ve, k=5)    
         if (specs=='Limacina').any():
-            lima_index = np.where(specs=='Limacina')
+            lima_index = np.where(specs=='Pteropod')
             sigma_bs_mean[:,lima_index[0][0]] = f(freqs)                
         else:                    
             sigma_bs_mean = np.vstack((sigma_bs_mean.T,[f(freqs)]))
             sigma_bs_mean = sigma_bs_mean.T
-            specs = np.append(specs,'Limacina')                                         
+            specs = np.append(specs,'Pteropod')                                         
 
     
     return specs, freqs, sigma_bs_mean
