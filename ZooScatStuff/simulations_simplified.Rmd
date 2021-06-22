@@ -82,8 +82,8 @@ The acoustically-dominant species that are considered weakly scatterers are the 
 ```{r model_set, warning=FALSE, message=FALSE}
 pm = data.frame(species=c('Copepod','Krill', 'Amphipod'),
   L_dist=c('gamma', 'log normal','gamma'),
-  L_shape =  c(7,     1.47, 9.9),
-  L_rate =   c(4,     0.31,  2.2),
+  L_shape =  c(7,     1.5, 9.9),
+  L_rate =   c(4,     0.3,  2.2),
   L_a_dist = c('normal'),
   L_a_mean = c(2.7, 10.5,     3),
   L_a_sd =   c(0.2,  0.3,     0.5),
