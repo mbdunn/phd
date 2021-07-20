@@ -78,6 +78,7 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
     spec: array of name of species
     freqs: array of frequencies
     sigma_bs_mean: array of mean cross-sectional backscatter simulation values 
+    ci_boot: array of bootstraped confidence intervals - 2 values for each frequency of each species
     """
     simulations = pd.read_feather(fname)
     # Add a row for sigma_bs calculated from TS
@@ -89,6 +90,7 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
     
     # Allocate space
     sigma_bs_mean = np.zeros([len(freqs), len(specs)])
+    ci_boot = np.zeros([2, len(freqs), len(specs)])
     #Sort values in sibgs column by species and frequencies
     simulations_group = simulations.groupby(["spec","freq"]).agg({'sigbs':lambda x: arr.array('d', x)})
     
@@ -101,54 +103,89 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
         spec_name = specs[ind_spec]
         sim_spec = np.asarray(simulations_group.sigbs[spec_name])   
         sigma_bs_mean[:,ind_spec] = mean_bs.loc[spec_name].to_numpy()[:,1]
-            
+        
+        sigma_bs_mean[:,ind_spec], ci_boot[:,:,ind_spec] = bootstrap_interval(simulations, spec=spec_name)
+        
+        
     if ve==True:
         cod_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_cod.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         cod_scat['sigbs'] = 10**(cod_scat['TS']/10)
-        cod_sigbs_ve = cod_scat.groupby(["frequency"]).agg({'sigbs':'mean'})
+        cod_sigbs_ve, cod_ci_ve = bootstrap_interval(cod_scat, spec=False)
         freqs_cod = cod_scat['frequency'].unique()/1000
-        
-        lima_index = np.where(specs=='Pteropod')
-        lima_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_limacina.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
-        lima_scat['sigbs'] = 10**(lima_scat['TS']/10)
-        lima_sigbs_ve = lima_scat.groupby(["frequency"]).agg({'sigbs':'mean'})
-        freqs_lima = lima_scat['frequency'].unique()/1000
         
         #resample frequency and append or replace
         f = UnivariateSpline(freqs_cod,cod_sigbs_ve, k=3, s=2)
+        f_ci1 = UnivariateSpline(freqs_cod,cod_ci_ve[0,:], k=3, s=2)
+        f_ci2 = UnivariateSpline(freqs_cod,cod_ci_ve[1,:], k=3, s=2)
+        # Check if this species is already accounted for in lengths and shape of preallocated result matrices.
+        # If yes, put the data where it belongs. If not append
         if (specs=='FishLarvae').any():
             cod_index=np.where(specs=='FishLarvae')
             sigma_bs_mean[:,cod_index[0][0]] = f(freqs)
+            ci_boot[0,:,cod_index[0][0]] = f_ci1(freqs)
+            ci_boot[1,:,cod_index[0][0]] = f_ci2(freqs)
         else:
             sigma_bs_mean = np.vstack((sigma_bs_mean.T,[f(freqs)]))
+            ci1_boot = ci_boot[0,:,:]
+            ci2_boot = ci_boot[1,:,:]
+            ci1_boot = np.vstack((ci1_boot.T,[f_ci1(freqs)]))
+            ci2_boot = np.vstack((ci2_boot.T,[f_ci2(freqs)]))
             sigma_bs_mean = sigma_bs_mean.T
+            ci_boot = np.array([ci1_boot.T, ci2_boot.T])
             specs = np.append(specs,'FishLarvae')
-            
-        f = UnivariateSpline(freqs_lima,lima_sigbs_ve, k=5)    
-        if (specs=='Limacina').any():
+        
+        
+        
+        lima_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_limacina.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
+        lima_scat['sigbs'] = 10**(lima_scat['TS']/10)
+        lima_sigbs_ve, lima_ci_ve = bootstrap_interval(lima_scat, spec=False)
+        freqs_lima = lima_scat['frequency'].unique()/1000
+        #resample frequency and append or replace   
+        f = UnivariateSpline(freqs_lima,lima_sigbs_ve, k=5)  
+        f_ci1 = UnivariateSpline(freqs_lima,lima_ci_ve[0,:], k=3, s=2)
+        f_ci2 = UnivariateSpline(freqs_lima,lima_ci_ve[1,:], k=3, s=2)
+
+        # Check if this species is already accounted for in lengths and shape of preallocated result matrices.
+        # If yes, put the data where it belongs. If not append!
+        if (specs=='Pteropod').any():
             lima_index = np.where(specs=='Pteropod')
-            sigma_bs_mean[:,lima_index[0][0]] = f(freqs)                
+            sigma_bs_mean[:,lima_index[0][0]] = f(freqs)
+            ci_boot[0,:,lima_index[0][0]] = f_ci1(freqs)
+            ci_boot[1,:,lima_index[0][0]] = f_ci2(freqs)
         else:                    
             sigma_bs_mean = np.vstack((sigma_bs_mean.T,[f(freqs)]))
+            ci1_boot = ci_boot[0,:,:]
+            ci2_boot = ci_boot[1,:,:]
+            ci1_boot = np.vstack((ci1_boot.T,[f_ci1(freqs)]))
+            ci2_boot = np.vstack((ci2_boot.T,[f_ci2(freqs)]))
             sigma_bs_mean = sigma_bs_mean.T
+            ci_boot = np.array([ci1_boot.T, ci2_boot.T])
             specs = np.append(specs,'Pteropod')                                         
-
     
-    return specs, freqs, sigma_bs_mean
+    
+    return specs, freqs, sigma_bs_mean,ci_boot
 
-def bootstrap_interval(simulations, spec, percentiles=(2.5, 97.5), n_boots=100):
+def bootstrap_interval(simulations, spec=False, percentiles=(2.5, 97.5), n_boots=100):
     """Extract mean and bootstrap a confidence interval for the mean of columns data with freq and sigmabs.
     simulations: dataframe containing all the model runs from scattering models
     spec: string describing the functional group.
     Output is the mean and the bootstrap confidence intervals of the mean.
     """
-    # First, calculate mean for each frequency of the whole sample
-    mean = simulations[simulations.spec==spec].groupby(['freq']).mean()['sigbs']
+
     
+    if spec:
+        # Resample , calculate mean repeat n_boot times, then calculate the SPREAD of the MEANS.
+        # First, calculate mean for each frequency of the whole sample
+        mean = simulations[simulations.spec==spec].groupby(['freq']).mean()['sigbs']
+        sigbs = simulations.sigbs[simulations.spec==spec]
+        freq = simulations.freq[simulations.spec==spec]
     
-    # Resample , calculate mean repeat n_boot times, then calculate the SPREAD of the MEANS.
-    sigbs = simulations.sigbs[simulations.spec==spec]
-    freq = simulations.freq[simulations.spec==spec]
+    else:
+        # First, calculate mean for each frequency of the whole sample
+        mean = simulations.groupby(['frequency']).mean()['sigbs']
+        sigbs = simulations.sigbs
+        freq = simulations.frequency
+    
     freqs = np.unique(freq)
     
     # Create our empty array to fill the results
