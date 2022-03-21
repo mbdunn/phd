@@ -110,7 +110,7 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
     if ve==True:
         cod_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_cod.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         cod_scat['sigbs'] = 10**(cod_scat['TS']/10)
-        cod_sigbs_ve, cod_ci_ve = bootstrap_interval(cod_scat, spec=False)
+        cod_sigbs_ve, cod_ci_ve = bootstrap_interval(cod_scat, spec=False, percentiles=(5, 95))
         freqs_cod = cod_scat['frequency'].unique()/1000
         
         #resample frequency and append or replace
@@ -138,7 +138,7 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
         
         lima_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_limacina.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         lima_scat['sigbs'] = 10**(lima_scat['TS']/10)
-        lima_sigbs_ve, lima_ci_ve = bootstrap_interval(lima_scat, spec=False)
+        lima_sigbs_ve, lima_ci_ve = bootstrap_interval(lima_scat, spec=False, percentiles=(5, 95))
         freqs_lima = lima_scat['frequency'].unique()/1000
         #resample frequency and append or replace   
         f = UnivariateSpline(freqs_lima,lima_sigbs_ve, k=5)  
