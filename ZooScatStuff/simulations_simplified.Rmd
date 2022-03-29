@@ -10,7 +10,7 @@ output:
 
 
 ```{r setup, warning=FALSE, message=FALSE}
-#tidyverse for cleaner code
+# tidyverse for cleaner code
 library(tidyr)
 library(dplyr)
 library(purrr)
@@ -80,10 +80,10 @@ A summary of the settings is defined in table 1.
 The acoustically-dominant species that are considered weakly scatterers are the ones described in the table below. the table also contains all their parameters space settings. 
 
 ```{r model_set, warning=FALSE, message=FALSE}
-pm = data.frame(species=c('Copepod','Krill', 'Amphipod'),
-  L_dist=c('gamma', 'log normal','gamma'),
-  L_shape =  c(7,     1.5, 9.9),
-  L_rate =   c(4,     0.3,  2.2),
+pm = data.frame(species=c('Copepod','Euphausiid larvae', 'Amphipod'),
+  L_dist=c('gamma', 'lnorm','gamma'),
+  L_shape =  c(7,     1.5, 10.3),
+  L_rate =   c(4,     0.3,  2.3),
   L_a_dist = c('normal'),
   L_a_mean = c(2.7, 10.5,     3),
   L_a_sd =   c(0.2,  0.3,     0.5),
@@ -93,7 +93,7 @@ pm = data.frame(species=c('Copepod','Krill', 'Amphipod'),
   h_dist = 'uniform',
   h_min = c(1.021,1.014, 1.053),
   h_max = c(1.032,1.024, 1.063),
-  theta_dist = 'uniform',
+  theta_dist = 'gaussian',
   theta_mean = c(90, 20,    0),
   theta_sd =   c(30, 20,   30),
   rho_l =    c(   3,  3,    13),
@@ -123,8 +123,8 @@ Now that we have lists of settings we can set those in the parameter files for e
 ######################################################################
 #create a get_para funciton
 get_para <- function(pm,spec,fn=-1){
-#length distribution - this is made up...
-if(spec=='krillx'){
+
+if(spec=='Krillx'){
   pmsel = pm%>%filter(species=='Euphausiids1')
   L = c(abs(rnorm(9*nsim/10,3,3)), rnorm(1*nsim/10, 20,4))
   }else{
@@ -152,6 +152,7 @@ if(spec=='krillx'){
   theme_classic()+
   ggtitle(paste(spec,'- Material properties - Density plots'))+
   xlab('')+ylab('')
+
   return(list(cp,p))
 }
 ##################################################################
@@ -164,11 +165,11 @@ cout[[2]]
 ```
 
 
-#### Krill (Euphausiacea furcilia & thyssanoessa inermis)  
+#### Krill (Thyssanoessa inermis)  
 
 ```{r krill, warning=FALSE, message=FALSE}
 fn = paste0(system.file(package="ZooScatR"),"/extdata/profiles/euphaus0.dat")
-kpout = get_para(pm, 'Krill',fn)
+kpout = get_para(pm, "Euphausiid larvae",fn)
 kpdf = kpout[[1]]
 kpout[[2]]
 ```
