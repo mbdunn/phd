@@ -132,7 +132,7 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
             ci2_boot = np.vstack((ci2_boot.T,[f_ci2(freqs)]))
             sigma_bs_mean = sigma_bs_mean.T
             ci_boot = np.array([ci1_boot.T, ci2_boot.T])
-            specs = np.append(specs,'FishLarvae')
+            specs = np.append(specs,'Fish larvae')
         
         
         
@@ -165,7 +165,7 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
     
     return specs, freqs, sigma_bs_mean,ci_boot
 
-def bootstrap_interval(simulations, spec=False, percentiles=(2.5, 97.5), n_boots=100):
+def bootstrap_interval(simulations, spec=False, percentiles=(5, 95), n_boots=100):
     """Extract mean and bootstrap a confidence interval for the mean of columns data with freq and sigmabs.
     simulations: dataframe containing all the model runs from scattering models
     spec: string describing the functional group.
@@ -215,15 +215,15 @@ def sv_smooth_ci(sv, N=1):
     Output is the smoothed median sv and the 95% percentiles fo the sv curves.
     """
     # First, calculate mean for each frequency of the whole sample
-    median = np.median(sv, axis=1) # Benoit Bird and Waluk 2020
+    mean = np.mean(sv, axis=1) # Benoit Bird and Waluk 2020
     
     # Running mean, first pad with N values then run
-    median_padded = np.pad(median, (N//2, N-1-N//2), mode='edge')
-    median_smooth = np.convolve(median_padded, np.ones(N)/N, mode='valid')
+    mean_padded = np.pad(mean, (N//2, N-1-N//2), mode='edge')
+    mean_smooth = np.convolve(mean_padded, np.ones(N)/N, mode='valid')
     
     # Calculate 95% CI but what is the "best" method for this data?
     ci = np.percentile(sv, (2.5, 97.5), axis=1)
     #ci = np.std(sv,axis=1) * 1.95 / np.sqrt(np.shape(sv_EV)[1])
     #ci = sns.utils.ci(sv_EV, axis=1)
 
-    return median_smooth, ci
+    return mean_smooth, ci
