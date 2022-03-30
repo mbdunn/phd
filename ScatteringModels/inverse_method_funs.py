@@ -110,7 +110,8 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False, percentiles = (5,95)):
     if ve==True:
         cod_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_cod.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         cod_scat['sigbs'] = 10**(cod_scat['TS']/10)
-        cod_sigbs_ve, cod_ci_ve = bootstrap_interval(cod_scat, spec=False, percentiles=percentiles)
+        cod_sigbs_ve = cod_scat.groupby(["frequency"]).agg({'sigbs':'mean'})
+        mean, cod_ci_ve = bootstrap_interval(cod_scat, spec=False, percentiles=percentiles)
         freqs_cod = cod_scat['frequency'].unique()/1000
         
         #resample frequency and append or replace
@@ -138,7 +139,8 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False, percentiles = (5,95)):
         
         lima_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_limacina.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         lima_scat['sigbs'] = 10**(lima_scat['TS']/10)
-        lima_sigbs_ve, lima_ci_ve = bootstrap_interval(lima_scat, spec=False, percentiles=percentiles)
+        lima_sigbs_ve = lima_scat.groupby(["frequency"]).agg({'sigbs':'mean'})
+        mean, lima_ci_ve = bootstrap_interval(lima_scat, spec=False, percentiles=percentiles)
         freqs_lima = lima_scat['frequency'].unique()/1000
         #resample frequency and append or replace   
         f = UnivariateSpline(freqs_lima,lima_sigbs_ve, k=5)  
@@ -208,7 +210,7 @@ def bootstrap_interval(simulations, spec=False, percentiles=(5, 95), n_boots=100
         ci_boot[:,i] = np.percentile(bootstrap_means, percentiles, axis=0)
     return mean, ci_boot
 
-def sv_smooth_ci(sv, N=1, percentiles=(5,95):
+def sv_smooth_ci(sv, N=1, percentiles=(5,95)):
     """Extract smoothed median and bootstrap a confidence interval for the mean of columns data with freq and sigmabs.
     sv: an array with one column for each curve from one continuum of targets
     N: running mean window. Default N=1.
