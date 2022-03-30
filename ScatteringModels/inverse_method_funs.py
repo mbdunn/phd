@@ -63,7 +63,7 @@ def read_widebandfrequencyresponse(fname, header=0, extracols = 1, source='Echov
     return freqs, sv, times
     
     
-def read_scatteringmodelsimulations(fname,nsim, ve=False):
+def read_scatteringmodelsimulations(fname,nsim, ve=False, percentiles = (5,95)):
     """"Opens a file created by R for ZooScatR containing all the information of the model runs. 
     Extract the frequencies, species and cross-sectional backscatter data.
     
@@ -104,13 +104,13 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
         sim_spec = np.asarray(simulations_group.sigbs[spec_name])   
         sigma_bs_mean[:,ind_spec] = mean_bs.loc[spec_name].to_numpy()[:,1]
         
-        sigma_bs_mean[:,ind_spec], ci_boot[:,:,ind_spec] = bootstrap_interval(simulations, spec=spec_name)
+        sigma_bs_mean[:,ind_spec], ci_boot[:,:,ind_spec] = bootstrap_interval(simulations, spec=spec_name, percentiles=percentiles)
         
         
     if ve==True:
         cod_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_cod.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         cod_scat['sigbs'] = 10**(cod_scat['TS']/10)
-        cod_sigbs_ve, cod_ci_ve = bootstrap_interval(cod_scat, spec=False, percentiles=(5, 95))
+        cod_sigbs_ve, cod_ci_ve = bootstrap_interval(cod_scat, spec=False, percentiles=percentiles)
         freqs_cod = cod_scat['frequency'].unique()/1000
         
         #resample frequency and append or replace
@@ -138,7 +138,7 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False):
         
         lima_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_limacina.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         lima_scat['sigbs'] = 10**(lima_scat['TS']/10)
-        lima_sigbs_ve, lima_ci_ve = bootstrap_interval(lima_scat, spec=False, percentiles=(5, 95))
+        lima_sigbs_ve, lima_ci_ve = bootstrap_interval(lima_scat, spec=False, percentiles=percentiles)
         freqs_lima = lima_scat['frequency'].unique()/1000
         #resample frequency and append or replace   
         f = UnivariateSpline(freqs_lima,lima_sigbs_ve, k=5)  
@@ -208,7 +208,7 @@ def bootstrap_interval(simulations, spec=False, percentiles=(5, 95), n_boots=100
         ci_boot[:,i] = np.percentile(bootstrap_means, percentiles, axis=0)
     return mean, ci_boot
 
-def sv_smooth_ci(sv, N=1):
+def sv_smooth_ci(sv, N=1, percentiles=(5,95):
     """Extract smoothed median and bootstrap a confidence interval for the mean of columns data with freq and sigmabs.
     sv: an array with one column for each curve from one continuum of targets
     N: running mean window. Default N=1.
@@ -222,7 +222,7 @@ def sv_smooth_ci(sv, N=1):
     mean_smooth = np.convolve(mean_padded, np.ones(N)/N, mode='valid')
     
     # Calculate 95% CI but what is the "best" method for this data?
-    ci = np.percentile(sv, (2.5, 97.5), axis=1)
+    ci = np.percentile(sv, percentiles, axis=1)
     #ci = np.std(sv,axis=1) * 1.95 / np.sqrt(np.shape(sv_EV)[1])
     #ci = sns.utils.ci(sv_EV, axis=1)
 
