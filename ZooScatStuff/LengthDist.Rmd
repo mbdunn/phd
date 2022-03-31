@@ -36,6 +36,13 @@ x_fishlarvae_MN = c(8.7, 8.5, 22, 4, 6, 5.5, 6, 5.5)
 
 x_cod_TT = c(0.76,1.82,0.95,1.51,1.5,1.48,1.35,0.95,0.85,1.2,0.75,0.75,0.62,1.31,0.75,0.65,0.76,1.5,0.56,1.0,0.93,0.63,0.67,0.52,0.64,1.2,0.82,0.68,0.61,0.82,0.6,0.76,0.72,0.83,0.91,0.93,0.75,0.82,1.23,0.69,0.76,0.73,0.83,0.63,0.65,0.81,0.71,1.62,1.58,0.91,1.11,0.87,0.99,1.3,0.61,1.57,0.8,0.71,1.11,0.72,0.75)*10 # Only my Tucker Trawl measurements #(cm*10)mm
 
+x_codR3_L = c(0.5, 1.68, 0.71, 1.34, 1.33, 1.3 , 1.16, 0.71, 0.6 , 0.99, 0.49,
+       0.49, 0.34, 1.11, 0.49, 0.37, 0.5 , 1.33, 0.27, 0.77, 0.69, 0.35,
+       0.4 , 0.23, 0.36, 0.99, 0.56, 0.41, 0.33, 0.56, 0.32, 0.5 , 0.45,
+       0.58, 0.66, 0.69, 0.49, 0.56, 1.02, 0.42, 0.5 , 0.46, 0.58, 0.35,
+       0.37, 0.55, 0.44, 1.46, 1.42, 0.66, 0.89, 0.62, 0.75, 1.1 , 0.33,
+       1.4 , 0.54, 0.44, 0.89, 0.45, 0.21) #mm length of swimbladder for total length acoustic calculation
+
 x_codR3 = c(0.25,0.84,0.35,0.67,0.66,0.65,0.58 ,0.35 ,0.3  ,0.49 ,0.24 ,0.24 ,0.17,0.56,0.24 ,0.19 ,0.25 ,0.66 ,0.14 ,0.38 ,0.34 ,0.18 ,0.2  ,0.11 ,0.18 ,0.49 ,0.28 ,0.2,0.16 ,0.28 ,0.16 ,0.25 ,0.23 ,0.29,0.33,0.34,0.24,0.28,0.51,0.21,0.25 ,0.23,0.29 ,0.18 ,0.19 ,0.28 ,0.22 ,0.73 ,0.71 ,0.33 ,0.44 ,0.31,0.38,0.55,0.16 ,0.7,0.27,0.22 ,0.44 ,0.23 ,0.1  ,0.17 ,0.3,0.19 ,0.26 ,0.26 ,0.26 ,0.24,0.19 ,0.18,0.22 ,0.16 ,0.16 ,0.15 ,0.24 ,0.16 ,0.15 ,0.17 ,0.26,0.14 ,0.2,0.19 ,0.15 ,0.15,0.13,0.15,0.22 ,0.17 ,0.16 ,0.15 ,0.17 ,0.14,0.17 ,0.16 ,0.17 ,0.18 ,0.19 ,0.16,0.17,0.23 ,0.16 ,0.17,0.16,0.17,0.15,0.15 ,0.17,0.16 ,0.27 ,0.27 ,0.18 ,0.21,0.18 ,0.19 ,0.23 ,0.15 ,0.27 ,0.17 ,0.16 ,0.21 ,0.16,0.13) # Lengths and associated widths of swimbladder calculated from Tucker Trawl length measurements 
 
 x_codR2 = c(3.8,9.1,4.75 ,7.55 ,7.5  ,7.4 ,6.75 ,4.75 ,4.25 ,6.0,3.75 ,3.75 ,3.1,6.55,3.75 ,3.25 ,3.8,7.5,2.8,5.0,4.65 ,3.15 ,3.35,2.6,3.2,6.0,4.1,3.4,3.05,4.1,3.0,3.8,3.6 ,4.15,4.55,4.65,3.75 ,4.1,6.15,3.45,3.8,3.65,4.15 ,3.15 ,3.25,4.05 ,3.55,8.1,7.9 ,4.55,5.55,4.35 ,4.95,6.5,3.05 ,7.85,4.9,3.55,5.55,3.6,2.5,0.31,0.84 ,0.40,0.69,0.68,0.67,0.6,0.4,0.35,0.53,0.30,0.30,0.24 ,0.58 ,0.30,0.25 ,0.31,0.68,0.21,0.43,0.39,0.24,0.26,0.19,0.25,0.53,0.34 ,0.27 ,0.23 ,0.34 ,0.23,0.31 ,0.29 ,0.34,0.38 ,0.39,0.30,0.34 ,0.54,0.27 ,0.31 ,0.29 ,0.34 ,0.24 ,0.25,0.33 ,0.28 ,0.74 ,0.72 ,0.38 ,0.48,0.36 ,0.42,0.58,0.23,0.72,0.33,0.28,0.48,0.29,0.18) # Lengths and associated widths from Tucker Trawl length measurements # mm
@@ -51,7 +58,9 @@ Length data from multi-net measurements by professional. Selected data from Stat
 
 ```{r}
 krill_dist = fitdist(c(x_Euphausiaceafurcilia), "gamma")
-
+length(x_Euphausiaceafurcilia)
+mean(x_Euphausiaceafurcilia)
+sd(x_Euphausiaceafurcilia)
 plot(krill_dist)
 summary(krill_dist)
 ```
@@ -62,7 +71,9 @@ A log ormal distribution is the best fit I have found
 
 ```{r}
 KrillBig_dist = fitdist(x_Thyssanoessainermis, "lnorm")
-
+length(x_Thyssanoessainermis)
+mean(x_Thyssanoessainermis)
+sd(x_Thyssanoessainermis)
 plot(KrillBig_dist)
 summary(KrillBig_dist)
 ```
@@ -74,6 +85,7 @@ I combined my data with the multi-net measurements done by a professional. The d
 
 ```{r}
 amphi_dist = fitdist(c(x_Themistoabyssorum_TT, x_Themistoabyssorum_MN), "gamma")
+length(c(x_Themistoabyssorum_TT, x_Themistoabyssorum_MN))
 mean(c(x_Themistoabyssorum_TT, x_Themistoabyssorum_MN))
 sd(c(x_Themistoabyssorum_TT, x_Themistoabyssorum_MN))
 plot(amphi_dist)
@@ -85,6 +97,7 @@ Multinet only
 
 ```{r}
 amphi_dist = fitdist( x_Themistoabyssorum_MN, "gamma")
+length( x_Themistoabyssorum_MN)
 mean( x_Themistoabyssorum_MN)
 sd(x_Themistoabyssorum_MN)
 plot(amphi_dist)
@@ -97,6 +110,7 @@ Tucker Trawl only
 
 ```{r}
 amphi_dist = fitdist(x_Themistoabyssorum_TT, "gamma")
+length(x_Themistoabyssorum_TT)
 mean(x_Themistoabyssorum_TT)
 sd(x_Themistoabyssorum_TT)
 plot(amphi_dist)
@@ -112,7 +126,9 @@ Measurements from Multinet length measurements spreadsheet and my tucker trawl m
 
 ```{r}
 Lima_dist = fitdist(x_Limacina_MN, "gamma")
-
+length(x_Limacina_MN)
+mean(x_Limacina_MN)
+sd(x_Limacina_MN)
 plot(Lima_dist)
 summary(Lima_dist)
 ```
@@ -122,7 +138,9 @@ Measurements from Multinet length measurements spreadsheet and my tucker trawl m
 
 ```{r}
 Lima_dist = fitdist(x_Limacina_TT, "gamma")
-
+length(x_Limacina_TT)
+mean(x_Limacina_TT)
+sd(x_Limacina_TT)
 plot(Lima_dist)
 summary(Lima_dist)
 ```
@@ -143,8 +161,10 @@ Measurements from Multinet length measurements spreadsheet and my tucker trawl m
 
 
 ```{r}
-Lima_dist = fitdist(c(x_Limacina_TT, x_Limacina_MN, x_Limacinewidth), "gamma")
-
+Lima_dist = fitdist(c(x_Limacina_TT, x_Limacina_MN), "gamma")
+length(c(x_Limacina_TT, x_Limacina_MN))
+mean(c(x_Limacina_TT, x_Limacina_MN))
+sd(c(x_Limacina_TT, x_Limacina_MN))
 plot(Lima_dist)
 summary(Lima_dist)
 ```
@@ -158,6 +178,7 @@ Measurements from tucker trawl because they are smaller and easier to get swimbl
 
 ```{r}
 codTuck_dist = fitdist(x_cod_TT, "lnorm")
+length(x_cod_TT)
 mean(x_cod_TT)
 sd(x_cod_TT)
 plot(codTuck_dist)
@@ -170,6 +191,7 @@ Measurements from Multinet
 
 ```{r}
 fish_dist = fitdist(x_fishlarvae_MN, "lnorm")
+length(x_fishlarvae_MN)
 mean(x_fishlarvae_MN)
 sd(x_fishlarvae_MN)
 plot(fish_dist)
@@ -195,33 +217,45 @@ Measurements from tucker trawl because they are smaller and easier to get swimbl
 
 ```{r}
 codTuck_dist = fitdist(x_codR2, "lnorm")
-mean(x_codTucker)
-sd(x_codTucker)
+mean(x_cod_TT)
+sd(x_cod_TT)
 plot(codTuck_dist)
 summary(codTuck_dist)
 ```
 ## Fish Larvae (cod) total length
 Measurements from tucker trawl adjusted to full length using 8.77R3+1.62 (see ve-cod.ipynb)
-
+only length measurements not widths
 
 ```{r}
-codTuckLength_dist = fitdist(((x_codR3*8.77)+(3.24/2))*2, "lnorm")
-mean(((x_codR3*8.77)+(3.24/2))*2)
-sd(((x_codR3*8.77)+(3.24/2))*2)
+codTuckLength_dist = fitdist((x_codR3_L*8.77)+(3.24/2), "lnorm")
+length((x_codR3_L*8.77)+(3.24/2))
+mean((x_codR3_L*8.77)+(3.24/2))
+sd((x_codR3_L*8.77)+(3.24/2))
 plot(codTuckLength_dist)
 summary(codTuckLength_dist)
 ```
 
 
-##Copepod
+##Copepod Multinet hernandez
 ```{r, fig.width=4, fig.height=3}
-Density = dnorm(seq(0, 5, by = .01), mean=2.62, sd=0.09)
-
+Density = dnorm(seq(0, 5, by = .001), mean=2.62, sd=0.09)
+mean(Density)
+sd(Density)
 dev.new(width=1, height=1)
-plot(seq(0, 5, by = .01),Density, 
+plot(seq(0, 5, by = .001),Density, 
      type='l',
      xlab='Size(mm)')
 
 ```
 
+##Copepod
+```{r, fig.width=4, fig.height=3}
+Density = rgamma(seq(0, 5, by = .001), shape=7, rate=4)
+mean(Density)
+sd(Density)
+dev.new(width=1, height=1)
+plot(seq(0, 5, by = .001),Density, 
+     type='l',
+     xlab='Size(mm)')
 
+```
