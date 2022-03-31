@@ -1,7 +1,7 @@
 ---
 title: "TS simulations for Tromsoflaket dominant species - ZooScatR"
 author: "Muriel Dunn"
-date: "25/02/2021"
+date: "30/03/2022"
 output:
   html_document:
     df_print: paged
@@ -81,10 +81,10 @@ The acoustically-dominant species that are considered weakly scatterers are the 
 
 ```{r model_set, warning=FALSE, message=FALSE}
 pm = data.frame(species=c('Copepod','Euphausiid larvae', 'Amphipod'),
-  L_dist=c('gamma', 'lnorm','gamma'),
-  L_shape =  c(7,     1.5, 10.3),
-  L_rate =   c(4,     0.3,  2.3),
-  L_a_dist = c('normal'),
+  L_dist=c('rnorm', 'rlnorm','rgamma'),
+  L_shape =  c(2.62,     1.5, 10.3),
+  L_rate =   c(0.09,     0.3,  2.3),
+  L_a_dist = c('gaussian'),
   L_a_mean = c(2.7, 10.5,     3),
   L_a_sd =   c(0.2,  0.3,     0.5),
   g_dist = 'uniform',
@@ -129,8 +129,13 @@ if(spec=='Krillx'){
   L = c(abs(rnorm(9*nsim/10,3,3)), rnorm(1*nsim/10, 20,4))
   }else{
   pmsel = pm%>%filter(species==spec)
-  L = rgamma(nsim,shape=pmsel$L_shape,rate=pmsel$L_rate)
-  }
+    if(pmsel$L_dist=='rnorm'){
+          L = do.call(pmsel$L_dist,list(nsim,mean=pmsel$L_shape,sd=pmsel$L_rate))
+    }else if (pmsel$L_dist=='rlnorm'){
+          L = do.call(pmsel$L_dist,list(nsim,meanlog=pmsel$L_shape,sdlog=pmsel$L_rate))
+    }else{
+  L = do.call(pmsel$L_dist,list(nsim,shape=pmsel$L_shape,rate=pmsel$L_rate))
+  }}
   cp = data.frame(species=spec,
   L=L,
   La=rnorm(nsim, pmsel$L_a_mean, pmsel$L_a_sd),
