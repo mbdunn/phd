@@ -82,22 +82,22 @@ The acoustically-dominant species that are considered weakly scatterers are the 
 ```{r model_set, warning=FALSE, message=FALSE}
 pm = data.frame(species=c('Copepod','Euphausiid larvae', 'Amphipod'),
   L_dist=c('rnorm', 'rlnorm','rgamma'),
-  L_shape =  c(2.62,     1.5, 10.3),
-  L_rate =   c(0.09,     0.3,  2.3),
+  L_shape =  c(2.62, 1.5, 10.3),
+  L_rate =   c(0.09, 0.3,  2.3),
   L_a_dist = c('rnorm'),
-  L_a_mean = c(2.7, 10.5,     3),
-  L_a_sd =   c(0.2,  0.3,     0.5),
+  L_a_mean = c(2.7, 10.5, 3),
+  L_a_sd =   c(0.2,  0.3, 0.5),
   g_dist = 'runif',
-  g_min = c(1.019,1.033, 1.053),
-  g_max = c(1.034,1.043, 1.063),
+  g_min = c(0.993,1.033, 1.053),
+  g_max = c(0.999,1.043, 1.063),
   h_dist = 'runif',
-  h_min = c(1.021,1.021, 1.053),
+  h_min = c(1.022,1.021, 1.053),
   h_max = c(1.032,1.031, 1.063),
   theta_dist = 'rnorm',
   theta_mean = c(90, 20,    0),
   theta_sd =   c(30, 20,   30),
-  rho_l =    c(   3,  3,    13),
-  taper =    c(  4,   5,    15)
+  rho_l =    c(  3,   3,    13),
+  taper =    c(  2,   4,    4)
 )
 ```
   
