@@ -345,7 +345,7 @@ pL = gridExtra::grid.arrange(grobs = sim_tmp$plots)
 
 
 ```{r export-feather}
-path <- "my_data.feather"
+path <- "my_data_mean.feather"
 write_feather(sim, path)
 
 

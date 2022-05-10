@@ -23,6 +23,7 @@ library(ggplot2)
 #special libraries
 library(ZooScatR)
 
+
 #pdf stuff
 library(kableExtra)
 library(knitr)
@@ -97,7 +98,7 @@ pm = data.frame(species=c('Copepod','Euphausiid larvae', 'Amphipod'),
   theta_mean = c(90, 20,    0),
   theta_sd =   c(30, 20,   30),
   rho_l =    c(  3,   3,    13),
-  taper =    c(  2,   4,    4)
+  taper =    c(  2,   4,    4) #taper =2 L/a>2 prolate spheroid, others selected from ZooScat Ex.
 )
 ```
   
@@ -223,7 +224,7 @@ set_para <- function(i, shape=FALSE, setdf=setdf){
     return(tmp)
     
   }else{
-    p = buildpos(para)
+    p = ZooScatR::buildpos(para)
     p = p$plot
     p = p+coord_equal()
     p = p+ggtitle(setdf$species[i])

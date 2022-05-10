@@ -9,6 +9,7 @@ output: html_document
 library(fitdistrplus)
 require(actuar)
 require(gamlss.dist)
+library(truncnorm)
 ```
 
 
