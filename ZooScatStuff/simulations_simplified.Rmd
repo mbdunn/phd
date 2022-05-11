@@ -60,7 +60,7 @@ fname <- paste0(system.file(package="ZooScatR"),"/extdata/configs/config_0.dat")
 # read the parameters file
 para = ZooScatR::read_para(fname)
 #set the soundspeed in the surrounding sea water
-misc <- list(cw=1470)
+misc <- list(cw=1480)
 #let's set the start and end frequencies
 f0=100 #will bepara$simu$var0
 f1=600 #will be para$simu$var1
@@ -81,7 +81,7 @@ A summary of the settings is defined in table 1.
 The acoustically-dominant species that are considered weakly scatterers are the ones described in the table below. the table also contains all their parameters space settings. 
 
 ```{r model_set, warning=FALSE, message=FALSE}
-pm = data.frame(species=c('Copepod','Euphausiid larvae', 'Amphipod'),
+pm = data.frame(species=c('Copepods','Euphausiid larvae', 'Amphipods'),
   L_dist=c('rnorm', 'rlnorm','rgamma'),
   L_shape =  c(2.62, 1.5, 10.3),
   L_rate =   c(0.09, 0.3,  2.3),
@@ -89,8 +89,8 @@ pm = data.frame(species=c('Copepod','Euphausiid larvae', 'Amphipod'),
   L_a_mean = c(2.7, 10.5, 3),
   L_a_sd =   c(0.2,  0.3, 0.5),
   g_dist = 'runif',
-  g_min = c(0.993,1.033, 1.053),
-  g_max = c(0.999,1.043, 1.063),
+  g_min = c(0.993,1.032, 1.053),
+  g_max = c(0.999,1.042, 1.063),
   h_dist = 'runif',
   h_min = c(1.022,1.021, 1.053),
   h_max = c(1.032,1.031, 1.063),
@@ -161,7 +161,7 @@ pmsel = pm%>%filter(species==spec)
 #set copepod settings
 #fn = paste0(system.file(package="ZooScatR"),"/extdata/profiles/copepod0.dat")
 fn = 'cop0.sat'
-cout = get_para(pm, 'Copepod', fn)
+cout = get_para(pm, 'Copepods', fn)
 cdf = cout[[1]]
 cout[[2]]
 ```
@@ -180,7 +180,7 @@ kpout[[2]]
 
 ```{r amphi, warning=FALSE, message=FALSE}
 fn = 'amphipod0.sat'
-apout = get_para(pm, 'Amphipod',fn)
+apout = get_para(pm, 'Amphipods',fn)
 apdf = apout[[1]]
 apout[[2]]
 ```
