@@ -162,7 +162,7 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False, percentiles = (5,95)):
             ci2_boot = np.vstack((ci2_boot.T,[f_ci2(freqs)]))
             sigma_bs_median = sigma_bs_median.T
             ci_boot = np.array([ci1_boot.T, ci2_boot.T])
-            specs = np.append(specs,'Pteropod')                                         
+            specs = np.append(specs,'Pteropods')                                         
     
     
     return specs, freqs, sigma_bs_median,ci_boot
