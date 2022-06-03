@@ -41,9 +41,9 @@ force=TRUE
 #set working dir
 setwd('C:\\Users\\mbd\\phd\\ZooScatStuff\\')
 ```
-## A priori assumptions  
+## AZKABAN population 
 
-We assume copepods, euphausiids, and amphipods to be the dominant species groups. For diverse Calanus groups we can use literature values to populate the mode. For amphipods and euphausiids we use the measurements from local biological sampling.
+Copepods, euphausiids, and chaetognaths were the dominant species groups during the zooplankton mix experiment. For diverse Calanus groups we can use literature values to populate the mode. For chaetognaths  and euphausiids we use the measurements from subset sampling.
 
 ## Model definition  
 
@@ -59,10 +59,10 @@ para = ZooScatR::read_para(fname)
 #set the soundspeed in the surrounding sea water
 misc <- list(cw=1480)
 #let's set the start and end frequencies
-f0=100 #will bepara$simu$var0
-f1=600 #will be para$simu$var1
-#number of output frequencies
-nf=801 #will be para$simu$n
+f0=185 #will bepara$simu$var0
+f1=255 #will be para$simu$var1
+# number of output frequencies
+nf=141 #will be para$simu$n
 ```
 
 For the parameter distributions a gamma, normal or uniform dsitribution were used.  
@@ -78,7 +78,7 @@ A summary of the settings is defined in table 1.
 The acoustically-dominant species that are considered weakly scatterers are the ones described in the table below. the table also contains all their parameters space settings. 
 
 ```{r model_set, warning=FALSE, message=FALSE}
-pm = data.frame(species=c('Copepods','Euphausiid larvae', 'Chaetognaths'),
+pm = data.frame(species=c('Copepods','Euphausiids', 'Chaetognaths'),
   L_dist=c('rnorm', 'rlnorm','rlnorm'),
   L_shape =  c(2.62, 2.4, 2),
   L_rate =   c(0.09, 0.27,  0.4),
@@ -170,7 +170,7 @@ cout[[2]]
 
 ```{r krill, warning=FALSE, message=FALSE}
 fn = paste0(system.file(package="ZooScatR"),"/extdata/profiles/euphaus0.dat")
-kpout = get_para(pm, "Euphausiid larvae",fn)
+kpout = get_para(pm, "Euphausiids",fn)
 kpdf = kpout[[1]]
 kpout[[2]]
 ```
