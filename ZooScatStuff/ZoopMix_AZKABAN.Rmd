@@ -57,7 +57,7 @@ fname <- paste0(system.file(package="ZooScatR"),"/extdata/configs/config_0.dat")
 # read the parameters file
 para = ZooScatR::read_para(fname)
 #set the soundspeed in the surrounding sea water
-misc <- list(cw=1480)
+misc <- list(cw=1446.56)
 #let's set the start and end frequencies
 f0=185 #will bepara$simu$var0
 f1=255 #will be para$simu$var1
@@ -78,26 +78,24 @@ A summary of the settings is defined in table 1.
 The acoustically-dominant species that are considered weakly scatterers are the ones described in the table below. the table also contains all their parameters space settings. 
 
 ```{r model_set, warning=FALSE, message=FALSE}
-pm = data.frame(species=c('Copepods','Euphausiids', 'Chaetognaths'),
-  L_dist=c('rnorm', 'rlnorm','rlnorm'),
-  L_shape =  c(2.62, 2.4, 2),
-  L_rate =   c(0.09, 0.27,  0.4),
+pm = data.frame(species=c('Copepods','Euphausiids','Chaetognaths','Jellyfish'),
+  L_dist=c('rnorm', 'rlnorm','rlnorm','rnorm'),
+  L_shape =  c(2.62, 2.4, 2, 2),
+  L_rate =   c(0.09, 0.27,  0.4, 0.5),
   L_a_dist = c('rnorm'),
-  L_a_mean = c(2.7, 10.5, 17.15),
-  L_a_sd =   c(0.2,  0.3, 3),
+  L_a_mean = c(2.7, 10.5, 17.15, 2),
+  L_a_sd =   c(0.2,  0.3, 0.5, 0.5),
   g_dist = 'rnorm',
-
-  g_mean = c(0.996,1.037, 1.028),
-  g_sd = c(0.003,0.005, 0.005),
+  g_mean = c(0.996,1.037, 1.028, 1.014),
+  g_sd = c(0.003,0.005, 0.005, 0.005),
   h_dist = 'rnorm',
-  h_mean = c(1.027,1.026, 1.028),
-  h_sd = c(0.005,0.005, 0.005),
-
+  h_mean = c(1.027,1.026, 1.028, 1.014),
+  h_sd = c(0.005,0.005, 0.005, 0.005),
   theta_dist = 'rnorm',
-  theta_mean = c(90, 20,    0),
-  theta_sd =   c(30, 20,   30),
-  rho_l =    c(  3,   3,    3),
-  taper =    c(  2,   4,    2) #taper =2 L/a>2 prolate spheroid, others selected from ZooScat Ex.
+  theta_mean = c(90, 20,    0, 0),
+  theta_sd =   c(30, 20,   30, 30),
+  rho_l =    c(  3,   3,    3, 0),
+  taper =    c(  2,   4,    2, 2) #taper =2 L/a>2 prolate spheroid, others selected from ZooScat Ex.
 )
 ```
   
@@ -185,7 +183,16 @@ chout = get_para(pm, 'Chaetognaths',fn)
 chdf = chout[[1]]
 chout[[2]]
 ```
+#### Jellyfish
 
+#### Hydromedusae (Aglantha digitale)
+
+```{r jelly, warning=FALSE, message=FALSE}
+fn = 'Aglanthadigitale_shape_Moroz2014.sat'
+jfout = get_para(pm, 'Jellyfish',fn)
+jfdf = jfout[[1]]
+jfout[[2]]
+```
 
 
 ### Run the model
@@ -193,7 +200,7 @@ chout[[2]]
 Now we can combine all the settings and prepare to run the simulations:
 
 ```{r combSettings, warning=FALSE, message=FALSE}
-setdf = do.call('rbind',list(cdf,kpdf,chdf))
+setdf = do.call('rbind',list(cdf,kpdf,chdf, jfdf))
 set_para <- function(i, shape=FALSE, setdf=setdf){
   para = ZooScatR::read_para(fname)
   #set the soundspeed in the surrounding sea water
@@ -313,7 +320,7 @@ pL = gridExtra::grid.arrange(grobs = sim_tmp$plots)
 
 
 ```{r export-feather}
-path <- "AZKABAN_ZoopMix_data.feather"
+path <- "AZKABAN_ZoopMix_data_plusjelly.feather"
 write_feather(sim, path)
 
 
