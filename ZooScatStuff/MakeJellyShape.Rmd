@@ -1,0 +1,35 @@
+---
+title: "MakeJellyShape"
+author: "Muriel Dunn"
+date: '2022-06-10'
+output: html_document
+---
+
+```{r setup, warning=FALSE, message=FALSE}
+# tidyverse for cleaner code
+library(tidyr)
+library(dplyr)
+library(purrr)
+#apply with progress
+library(pbapply)
+
+#plotting
+library(ggplot2)
+
+#special libraries
+library(ZooScatR)
+
+
+#pdf stuff
+library(kableExtra)
+library(knitr)
+
+#exporting results
+```
+First run ImageJ, calibrate and draw polygon following instructions in "Get shape defining points from picture using ImageJ.pdf". Then run midline function below.
+## Use make midline function
+```{r midline, warning=FALSE, message=FALSE}
+fn = './Aglanthadigitale_shape_Moroz2014.txt'
+ZooScatR::get_mid(fn, outdir = "", ndens = 500, prec = 2, rot = FALSE, res = 0.02)
+
+```
