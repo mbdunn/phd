@@ -57,12 +57,12 @@ fname <- paste0(system.file(package="ZooScatR"),"/extdata/configs/config_0.dat")
 # read the parameters file
 para = ZooScatR::read_para(fname)
 #set the soundspeed in the surrounding sea water
-misc <- list(cw=1446.56)
+misc <- list(cw=1448.01)
 #let's set the start and end frequencies
 f0=185 #will bepara$simu$var0
-f1=255 #will be para$simu$var1
+f1=383 #will be para$simu$var1
 # number of output frequencies
-nf=141 #will be para$simu$n
+nf=397 #will be para$simu$n
 ```
 
 For the parameter distributions a gamma, normal or uniform dsitribution were used.  
@@ -86,11 +86,11 @@ pm = data.frame(species=c('Copepods','Euphausiids','Chaetognaths','Jellyfish'),
   L_a_mean = c(2.7, 10.5, 17.15, 2),
   L_a_sd =   c(0.2,  0.3, 0.5, 0.5),
   g_dist = 'rnorm',
-  g_mean = c(0.996,1.037, 1.028, 1.014),
-  g_sd = c(0.003,0.005, 0.005, 0.005),
+  g_mean = c(1.025/1.0281,1.037, 1.028, 1.014/1.0281),
+  g_sd = c(0.005,0.005, 0.005, 0.005),
   h_dist = 'rnorm',
-  h_mean = c(1.027,1.026, 1.028, 1.014),
-  h_sd = c(0.005,0.005, 0.005, 0.005),
+  h_mean = c(1.027,1.026, 1.028, 1.014/1.0281),
+  h_sd = c(0.007,0.005, 0.005, 0.005),
   theta_dist = 'rnorm',
   theta_mean = c(90, 20,    0, 0),
   theta_sd =   c(30, 20,   30, 30),
