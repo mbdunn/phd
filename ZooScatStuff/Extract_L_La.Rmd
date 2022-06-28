@@ -1,0 +1,66 @@
+---
+title: "Extract L and La"
+author: "Muriel Dunn"
+date: '2022-06-10'
+output: html_document
+---
+
+```{r setup, warning=FALSE, message=FALSE}
+# tidyverse for cleaner code
+library(tidyr)
+library(dplyr)
+library(purrr)
+#apply with progress
+library(pbapply)
+
+#plotting
+library(ggplot2)
+
+#special libraries
+library(ZooScatR)
+
+
+#pdf stuff
+library(kableExtra)
+library(knitr)
+
+#exporting results
+```
+First run ImageJ, calibrate and draw polygon following instructions in "Get shape defining points from picture using ImageJ.pdf". Then run midline function below.
+## Use make midline function
+```{r midline, warning=FALSE, message=FALSE}
+fn = 'C:/Users/mbd/OneDrive - Akvaplan-niva AS/PhD-APN/ChaptersandExperiments/AZKABAN-light/ZoopMix_paper/New folder/Muriel KB3 DI/Copepod/KB3_TT_150122_0009.txt'
+df = ZooScatR::get_mid(fn, outdir = "Shapes/Copepod_", ndens = 500, prec = 2, rot =TRUE, res = 0.02)
+df$L
+df$La
+```
+```{r get_mid, warning=False, message=False}
+path_dir = 'C:/Users/mbd/OneDrive - Akvaplan-niva AS/PhD-APN/ChaptersandExperiments/AZKABAN-light/ZoopMix_paper/New folder/Muriel KB3 DI/Hydrozoa/'
+
+L = numeric()
+La = numeric()
+
+files <- list.files(path=path_dir, pattern="*.txt", full.names=TRUE, recursive=FALSE)
+for (f_n in files) {
+    #print(f_n)
+    df = ZooScatR::get_mid(f_n, outdir = "Shapes/Hydrozoa_", ndens = 500, prec = 2, rot = TRUE, res = 0.02) # load file
+  
+    # store parameters
+    L <- append(L, df$L)
+    La <- append(La, df$La)
+    
+}
+```
+
+``` {r save, warning=False, message=False}
+# Save parameters
+df_L = as.data.frame(L)
+df_La = as.data.frame(La)
+
+path <- "L_Copepods.feather"
+write_feather(df_L, path)
+
+path <- "La_Copepods.feather"
+write_feather(df_La, path)
+
+```
