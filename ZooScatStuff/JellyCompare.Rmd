@@ -1,0 +1,310 @@
+---
+title: "JellyCompare"
+author: "Muriel Dunn"
+date: '2022-06-28'
+output: html_document
+---
+
+
+```{r setup, warning=FALSE, message=FALSE}
+# tidyverse for cleaner code
+library(tidyr)
+library(dplyr)
+library(purrr)
+#apply with progress
+library(pbapply)
+
+#plotting
+library(ggplot2)
+
+#special libraries
+library(ZooScatR)
+
+
+#pdf stuff
+library(kableExtra)
+library(knitr)
+
+#exporting results
+library(feather)
+
+#define if simulations should be multi-threadded. THis will run the simulations in parallel using with # cores available -1
+runParallel = TRUE
+if (runParallel == TRUE){
+  library(foreach)
+  library(doParallel)
+  
+  registerDoParallel(parallel::detectCores()-1)
+}
+#force running a new simulation, even if an RDS file with simualtions is available
+force=TRUE
+#set working dir
+setwd('C:\\Users\\mbd\\phd\\ZooScatStuff\\')
+```
+## Hydrozoa scattering target strength
+
+Literature on hydrozoa scattering does not report robust measurements of g and h values. Here we compare different TS values from litterature to confirm choices in g and h values.
+
+## Model definition  
+
+Let's start by loading some standard values for the model:  
+
+```{r setdir, warning=FALSE, message=FALSE}
+#number of simulations
+nsim = 1000
+#location of the standard parameter file contained within the package
+fname <- paste0(system.file(package="ZooScatR"),"/extdata/configs/config_0.dat")
+# read the parameters file
+para = ZooScatR::read_para(fname)
+#set the soundspeed in the surrounding sea water
+misc <- list(cw=1448.01)
+#let's set the start and end frequencies
+f0=100 #will bepara$simu$var0
+f1=450 #will be para$simu$var1
+# number of output frequencies
+nf=351 #will be para$simu$n
+```
+
+For the parameter distributions a gamma, normal or uniform dsitribution were used.  
+
+A summary of the settings is defined in table 1.
+The acoustically-dominant species that are considered weakly scatterers are the ones described in the table below. the table also contains all their parameters space settings. 
+
+```{r model_set, warning=FALSE, message=FALSE}
+pm = data.frame(species=c('Brierley2001', 'Brierley2004', 'Monger1998'),
+  L_dist=c('rnorm', 'rnorm', 'rnorm'),
+  L_shape =  c(74, 65, 56), #mm
+  L_rate =   c(10, 10, 10),
+  L_a_dist = c('rnorm', 'rnorm', 'rnorm'),
+  L_a_mean = c(2.8, 2.8, 2.8),
+  L_a_sd =   c(0.5, 0.5, 0.5),
+  g_dist = 'rnorm',
+  g_mean = c(1.007, 1.007, 1.007),
+  g_sd = c(0.005, 0.005, 0.005),
+  h_dist = 'rnorm',
+  h_mean = c(1.007, 1.007, 1.007),
+  h_sd = c(0.005, 0.005, 0.005),
+  theta_dist = 'rnorm',
+  theta_mean = c(90, 90, 90),
+  theta_sd =   c(20, 20, 20),
+  rho_l =    c( 0, 0, 0),
+  taper =    c( 2, 2, 2) #taper =2 L/a>2 prolate spheroid, others selected from ZooScat Ex.
+)
+```
+  
+```{r table, echo=FALSE}
+knitr::kable(pm[,1:7], booktabs = T, linesep = "") %>%
+kable_styling(latex_options = "striped")
+
+knitr::kable(pm[,c(1,8:13)], booktabs = T, linesep = "") %>%
+kable_styling(latex_options = "striped")
+
+knitr::kable(pm[,c(1,14:18)], booktabs = T, linesep = "") %>%
+kable_styling(latex_options = "striped")
+
+```
+
+### Define the Model parameters
+
+Now that we have lists of settings we can set those in the parameter files for each species group.  
+
+#### Copepods (Calanus finmarchicus CV)
+
+```{r get_para, warning=FALSE, message=FALSE}
+######################################################################
+#create a get_para funciton
+get_para <- function(pm,spec,fn=-1){
+
+pmsel = pm%>%filter(species==spec)
+  if(pmsel$L_dist=='rnorm'){
+          L = do.call(pmsel$L_dist,list(nsim,mean=pmsel$L_shape,sd=pmsel$L_rate))
+    }else if (pmsel$L_dist=='rlnorm'){
+          L = do.call(pmsel$L_dist,list(nsim,meanlog=pmsel$L_shape,sdlog=pmsel$L_rate))
+    }else{
+          L = do.call(pmsel$L_dist,list(nsim,shape=pmsel$L_shape,rate=pmsel$L_rate))
+  }
+  cp = data.frame(species=spec,
+  L=L,
+  La=do.call(pmsel$L_a_dist, list(nsim, pmsel$L_a_mean, pmsel$L_a_sd)),
+  g=do.call(pmsel$g_dist,list(nsim, pmsel$g_mean, pmsel$g_sd)),
+  h=do.call(pmsel$h_dist,list(nsim, pmsel$h_mean, pmsel$h_sd)),
+  taper=pmsel$taper,
+  rhol=pmsel$rho_l,
+  pf=fn,
+  theta=do.call(pmsel$theta_dist,list(nsim, pmsel$theta_mean, pmsel$theta_sd)))
+  cdf = gather(cp,'var','value',-species,-taper, -rhol,-pf)
+  subtit <- c('L' = "Length~(mm)",
+  'La' = "L/a",
+  'g' ="Density~contrast~g",
+  'h' = 'Sound~speed~contrast~h',
+  'theta' = 'Angle~theta~(degree)' )
+  p <- ggplot(data=cdf, aes(x=value))+
+  geom_density()+
+  facet_wrap(.~var, scales='free')+#, labeller =labeller(var= as_labeller(subtit, label_parsed)))+
+  theme_classic()+
+  ggtitle(paste(spec,'- Material properties - Density plots'))+
+  xlab('')+ylab('')
+
+  return(list(cp,p))
+}
+##################################################################
+```
+
+
+#### Jellyfish
+
+#### Hydromedusae (Aglantha digitale)
+
+```{r jelly, warning=FALSE, message=FALSE}
+#fn = 'Aglanthadigitale_shape_Moroz2014.sat'
+fn = 'Shapes/Hydrozoa_KB3_TT_150122_0026.sat'
+B2001out = get_para(pm, 'Brierley2001',fn)
+B2001df = B2001out[[1]]
+B2001out[[2]]
+```
+
+```{r jelly2004, warning=FALSE, message=FALSE}
+
+B2004out = get_para(pm, 'Brierley2004',fn)
+B2004df = B2004out[[1]]
+B2004out[[2]]
+```
+
+
+```{r jelly1998, warning=FALSE, message=FALSE}
+
+M1998out = get_para(pm, 'Monger1998',fn)
+M1998df = M1998out[[1]]
+M1998out[[2]]
+```
+
+### Run the model
+
+Now we can combine all the settings and prepare to run the simulations:
+
+```{r combSettings, warning=FALSE, message=FALSE}
+setdf = do.call('rbind',list(B2001df, B2004df, M1998df))
+set_para <- function(i, shape=FALSE, setdf=setdf){
+  para = ZooScatR::read_para(fname)
+  #set the soundspeed in the surrounding sea water
+  #misc <- list(cw=1500)
+  #let's set the start and end frequencies
+  para$simu$var0=f0
+  para$simu$var1=f1
+  #number of output frequencies
+  para$simu$n=nf
+  para$shape$L = setdf$L[i]
+  para$shape$L_a = setdf$La[i]
+  para$phy$g0 = setdf$g[i]
+  para$phy$h0 = setdf$h[i]
+  para$shape$order = setdf$taper[i]
+  para$shape$rho_L = setdf$rhol[i]
+  para$shape$prof_name = setdf$pf[i]
+  para$orient$angm = setdf$theta[i]
+  
+  if(shape==FALSE){
+    res = ZooScatR::bscat(para=para, misc=misc) #Target strength vs Frequency
+    tmp=data.frame(TS=res$y,
+    freq=seq(f0,f1, length.out = nf),
+    L=para$shape$L,
+    la=para$shape$L_a,
+    g=para$phy$g0,
+    h=para$phy$h0,
+    orient=para$orient$angm,
+    spec=setdf$species[i])
+    return(tmp)
+    
+  }else{
+    p = ZooScatR::buildpos(para)
+    p = p$plot
+    p = p+coord_equal()
+    p = p+ggtitle(setdf$species[i])
+    print(p)
+    return(p)
+  }
+}
+
+```
+
+### Model input shapes
+
+First let’s have a look at the selected shapes:
+
+```{r showShapes, fig.height=4,fig.width=8, warning=FALSE, message=FALSE}
+specp = setdf%>%group_by(species)%>%filter(row_number()==1)
+for(i in 1:length(specp$species)){set_para(i,shape=TRUE, setdf=specp)}
+```
+
+Now we can run the simulations:
+
+```{r runSIm, warning=FALSE, message=FALSE}
+if(force ==FALSE & file.exists('sim2.RDS')){
+  message(Sys.time(), ': Found simulations...Using old simulaitons...')
+  sim = readRDS('sim2.RDS')
+}else{
+message(Sys.time(),': Running simulations...')
+if(runParallel == TRUE){
+sim = foreach(i=1:length(setdf$L), .combine=rbind) %dopar% {set_para(i, shape=FALSE,setdf=setdf)}
+}else{
+sim = do.call('rbind',
+pbapply(matrix(1:length(setdf$L)),1,function(i){set_para(i, shape=FALSE,setdf=setdf)})
+)
+}
+message(Sys.time(),': Running simulations completed!')
+saveRDS(sim, file='sim2.RDS', compress=TRUE)
+}
+```
+  
+Let's have a look at the results.
+
+Let's plot TS grouped by species vs Length:
+  
+```{r fig.width=12, fig.height=12}
+plot_func <- function(sim, name='L (mm)', var='L', y='TS',x='freq', title) {
+  ggplot(data = sim, aes_string(x = x, y = y, col = var)) +
+    geom_point(size=0.01) +
+    scale_colour_viridis_c(name=name)+
+    ggtitle(title)+
+    xlab('Frequency (kHz)')+
+    ylab('TS (dB)')+
+    theme_classic()
+}
+pL <- function(sim,spec){plot_func(sim, name='L (mm)', var='L', y='TS',x='freq', spec)}
+
+sim_tmp <- sim %>% 
+  group_by(spec) %>% 
+  nest() %>% 
+  mutate(plots = map2(data, spec, pL))
+pL = gridExtra::grid.arrange(grobs = sim_tmp$plots)
+```
+
+
+To have a look at the overall distribution, we can also look at 2D density plots:  
+
+```{r fig.width=12, fig.height=12}
+pL <- function(sim, title){
+
+  ggplot(data=sim, aes(x=freq, y=TS))+
+    geom_density2d_filled()+
+    #facet_wrap(.~spec, scales='free')+
+    scale_x_continuous(expand=c(0,0))+
+    scale_y_continuous(expand=c(0,0))+
+    ggtitle(title)+
+    theme_classic()
+}
+
+
+sim_tmp <- sim%>% 
+  group_by(spec) %>% 
+  nest() %>% 
+  mutate(plots = map2(data, spec, pL))
+pL = gridExtra::grid.arrange(grobs = sim_tmp$plots)
+```
+
+
+```{r export-feather}
+path <- "JellyCompare.feather"
+write_feather(sim, path)
+
+
+```
