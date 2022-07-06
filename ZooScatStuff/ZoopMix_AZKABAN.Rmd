@@ -51,7 +51,7 @@ Let's start by loading some standard values for the model:
 
 ```{r setdir, warning=FALSE, message=FALSE}
 #number of simulations
-nsim = 1000
+nsim = 10000
 #location of the standard parameter file contained within the package
 fname <- paste0(system.file(package="ZooScatR"),"/extdata/configs/config_0.dat")
 # read the parameters file
@@ -63,39 +63,33 @@ f0=185 #will bepara$simu$var0
 f1=383 #will be para$simu$var1
 # number of output frequencies
 nf=397 #will be para$simu$n
+
 ```
 
 For the parameter distributions a gamma, normal or uniform dsitribution were used.  
-For gamma distributions a density function with a shape $s$ and a rate $a$ was defined as:
 
-$$f_{\Gamma}(x)= \frac{1}{s^a \Gamma(a) x^{a-1} e^{-\frac{x}{s}}}$$
-where $\Gamma(a)$ is defined as [@milne-thomson_handbook_1972]:  
- $$\Gamma(a)=\int_0^\infty{t^{a-1}e^{-t} dt}$$
-
-Normal distributions were computed with standard deviation $\sigma$ and mean $\mu$ with a density given by [@johnson_continuous_1995]:
-$$f_N(x)=\frac{1}{\sqrt{2\pi}\sigma e^{-{\frac{(x-\mu)^2}{2\sigma^2}}}}$$
 A summary of the settings is defined in table 1.
 The acoustically-dominant species that are considered weakly scatterers are the ones described in the table below. the table also contains all their parameters space settings. 
 
 ```{r model_set, warning=FALSE, message=FALSE}
 pm = data.frame(species=c('Copepods','Euphausiids','Chaetognaths','Jellyfish'),
-  L_dist=c('rnorm', 'rlnorm','rlnorm','rnorm'),
-  L_shape =  c(2.62, 2.4, 2, 2),
-  L_rate =   c(0.09, 0.27,  0.4, 0.5),
+  L_dist=c('rnorm', 'rlnorm','rgamma','rlnorm'),
+  L_shape =  c(3.3, 2.4, 10.6, 2.4),
+  L_rate =   c(0.7, 0.3,  0.6, 0.4),
   L_a_dist = c('rnorm'),
-  L_a_mean = c(2.7, 10.5, 17.15, 2),
-  L_a_sd =   c(0.2,  0.3, 0.5, 0.5),
+  L_a_mean = c(5.3, 11, 26, 2.8),
+  L_a_sd =   c(0.9,  2, 8, 0.5),
   g_dist = 'rnorm',
-  g_mean = c(1.025/1.0281,1.037, 1.028, 1.014/1.0281),
+  g_mean = c(1.025/1.0281,1.037, 1.03, 1.007),
   g_sd = c(0.005,0.005, 0.005, 0.005),
   h_dist = 'rnorm',
-  h_mean = c(1.027,1.026, 1.028, 1.014/1.0281),
-  h_sd = c(0.007,0.005, 0.005, 0.005),
+  h_mean = c(1.027,1.026, 1.03, 1.007),
+  h_sd = c(0.005,0.005, 0.005, 0.005),
   theta_dist = 'rnorm',
-  theta_mean = c(90, 20,    0, 0),
+  theta_mean = c(90, 20,    0, 90),
   theta_sd =   c(30, 20,   30, 30),
-  rho_l =    c(  3,   3,    3, 0),
-  taper =    c(  2,   4,    2, 2) #taper =2 L/a>2 prolate spheroid, others selected from ZooScat Ex.
+  rho_l =    c(  3,   3,    0, 1),
+  taper =    c(  2,   4,    4, 2) #taper =2 L/a>2 prolate spheroid, others selected from ZooScat Ex.
 )
 ```
   
@@ -158,6 +152,7 @@ pmsel = pm%>%filter(species==spec)
 #set copepod settings
 #fn = paste0(system.file(package="ZooScatR"),"/extdata/profiles/copepod0.dat")
 fn = 'cop0.sat'
+fn = 'Shapes/Copepod_KB3_TT_150122_0134.sat'
 cout = get_para(pm, 'Copepods', fn)
 cdf = cout[[1]]
 cout[[2]]
@@ -167,7 +162,8 @@ cout[[2]]
 #### Krill (Thyssanoessa inermis)  
 
 ```{r krill, warning=FALSE, message=FALSE}
-fn = paste0(system.file(package="ZooScatR"),"/extdata/profiles/euphaus0.dat")
+#fn = paste0(system.file(package="ZooScatR"),"/extdata/profiles/euphaus0.dat")
+fn = 'Shapes/Euphausiid_KB3_TT_150122_0001-2.sat'
 kpout = get_para(pm, "Euphausiids",fn)
 kpdf = kpout[[1]]
 kpout[[2]]
@@ -178,7 +174,8 @@ kpout[[2]]
 #### Chaetognaths (Parasagitta )
 
 ```{r chaet, warning=FALSE, message=FALSE}
-fn = 'chaeto0.sat'
+#fn = 'chaeto0.sat'
+fn = 'Shapes/Chaetognath_KB3_TT_150122_0091.sat'
 chout = get_para(pm, 'Chaetognaths',fn)
 chdf = chout[[1]]
 chout[[2]]
@@ -188,7 +185,8 @@ chout[[2]]
 #### Hydromedusae (Aglantha digitale)
 
 ```{r jelly, warning=FALSE, message=FALSE}
-fn = 'Aglanthadigitale_shape_Moroz2014.sat'
+#fn = 'Aglanthadigitale_shape_Moroz2014.sat'
+fn = 'Shapes/Hydrozoa_KB3_TT_150122_0026.sat'
 jfout = get_para(pm, 'Jellyfish',fn)
 jfdf = jfout[[1]]
 jfout[[2]]
@@ -203,8 +201,6 @@ Now we can combine all the settings and prepare to run the simulations:
 setdf = do.call('rbind',list(cdf,kpdf,chdf, jfdf))
 set_para <- function(i, shape=FALSE, setdf=setdf){
   para = ZooScatR::read_para(fname)
-  #set the soundspeed in the surrounding sea water
-  #misc <- list(cw=1500)
   #let's set the start and end frequencies
   para$simu$var0=f0
   para$simu$var1=f1
@@ -320,7 +316,7 @@ pL = gridExtra::grid.arrange(grobs = sim_tmp$plots)
 
 
 ```{r export-feather}
-path <- "AZKABAN_ZoopMix_data_plusjelly.feather"
+path <- "AZKABAN_ZoopMix_data_TenThousand.feather"
 write_feather(sim, path)
 
 
