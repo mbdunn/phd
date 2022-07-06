@@ -29,8 +29,8 @@ library(knitr)
 First run ImageJ, calibrate and draw polygon following instructions in "Get shape defining points from picture using ImageJ.pdf". Then run midline function below.
 ## Use make midline function
 ```{r midline, warning=FALSE, message=FALSE}
-fn = 'C:/Users/mbd/OneDrive - Akvaplan-niva AS/PhD-APN/ChaptersandExperiments/AZKABAN-light/ZoopMix_paper/New folder/Muriel KB3 DI/Copepod/KB3_TT_150122_0009.txt'
-df = ZooScatR::get_mid(fn, outdir = "Shapes/Copepod_", ndens = 500, prec = 2, rot =TRUE, res = 0.02)
+fn = 'C:/Users/mbd/OneDrive - Akvaplan-niva AS/PhD-APN/ChaptersandExperiments/AZKABAN-light/ZoopMix_paper/New folder/Muriel KB3 DI/Hydrozoa/KB3_TT_150122_0026.txt'
+df = ZooScatR::get_mid(fn, outdir = "Shapes/Hydrozoa_", ndens = 500, prec = 2, rot =TRUE, res = 0.02)
 df$L
 df$La
 ```
@@ -57,10 +57,10 @@ for (f_n in files) {
 df_L = as.data.frame(L)
 df_La = as.data.frame(La)
 
-path <- "L_Copepods.feather"
+path <- "L_Hydrozoa.feather"
 write_feather(df_L, path)
 
-path <- "La_Copepods.feather"
+path <- "La_Hy.feather"
 write_feather(df_La, path)
 
 ```
