@@ -30,6 +30,10 @@ First run ImageJ, calibrate and draw polygon following instructions in "Get shap
 ## Use make midline function
 ```{r midline, warning=FALSE, message=FALSE}
 fn = './Aglanthadigitale_shape_Moroz2014.txt'
-ZooScatR::get_mid(fn, outdir = "", ndens = 500, prec = 2, rot = FALSE, res = 0.02)
+df = ZooScatR::get_mid(fn, outdir = "", ndens = 500, prec = 2, rot = FALSE, res = 0.02)
 
+```
+```{r save, warning=False, message=False}
+df$L
+df$La
 ```
