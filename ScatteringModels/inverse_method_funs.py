@@ -115,9 +115,9 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False, percentiles = (5,95)):
         freqs_cod = cod_scat['frequency'].unique()/1000
         
         #resample frequency and append or replace
-        f = UnivariateSpline(freqs_cod,cod_sigbs_ve, k=3, s=2)
-        f_ci1 = UnivariateSpline(freqs_cod,cod_ci_ve[0,:], k=3, s=2)
-        f_ci2 = UnivariateSpline(freqs_cod,cod_ci_ve[1,:], k=3, s=2)
+        f = UnivariateSpline(freqs_cod,cod_sigbs_ve, k=5)
+        f_ci1 = UnivariateSpline(freqs_cod,cod_ci_ve[0,:], k=5)
+        f_ci2 = UnivariateSpline(freqs_cod,cod_ci_ve[1,:], k=5)
         # Check if this species is already accounted for in lengths and shape of preallocated result matrices.
         # If yes, put the data where it belongs. If not append
         if (specs=='FishLarvae').any():
@@ -144,8 +144,8 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False, percentiles = (5,95)):
         freqs_lima = lima_scat['frequency'].unique()/1000
         #resample frequency and append or replace   
         f = UnivariateSpline(freqs_lima,lima_sigbs_ve, k=5)  
-        f_ci1 = UnivariateSpline(freqs_lima,lima_ci_ve[0,:], k=3, s=2)
-        f_ci2 = UnivariateSpline(freqs_lima,lima_ci_ve[1,:], k=3, s=2)
+        f_ci1 = UnivariateSpline(freqs_lima,lima_ci_ve[0,:], k=5)
+        f_ci2 = UnivariateSpline(freqs_lima,lima_ci_ve[1,:], k=5)
 
         # Check if this species is already accounted for in lengths and shape of preallocated result matrices.
         # If yes, put the data where it belongs. If not append!

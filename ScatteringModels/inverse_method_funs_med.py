@@ -108,58 +108,58 @@ def read_scatteringmodelsimulations(fname,nsim, ve=False, percentiles = (5,95)):
         
         
     if ve==True:
-        cod_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_cod.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
+        cod_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_cod_15072022.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         cod_scat['sigbs'] = 10**(cod_scat['TS']/10)
         cod_sigbs_ve = cod_scat.groupby(["frequency"]).agg({'sigbs':'median'})
         median, cod_ci_ve = bootstrap_interval(cod_scat, spec=False, percentiles=percentiles)
         freqs_cod = cod_scat['frequency'].unique()/1000
         
         #resample frequency and append or replace
-        f = UnivariateSpline(freqs_cod,cod_sigbs_ve, k=5)
-        f_ci1 = UnivariateSpline(freqs_cod,cod_ci_ve[0,:], k=5)
-        f_ci2 = UnivariateSpline(freqs_cod,cod_ci_ve[1,:], k=5)
+        # f = UnivariateSpline(freqs_cod,cod_sigbs_ve, k=5)
+        # f_ci1 = UnivariateSpline(freqs_cod,cod_ci_ve[0,:], k=5)
+        # f_ci2 = UnivariateSpline(freqs_cod,cod_ci_ve[1,:], k=5)
         # Check if this species is already accounted for in lengths and shape of preallocated result matrices.
         # If yes, put the data where it belongs. If not append
         if (specs=='FishLarvae').any():
             cod_index=np.where(specs=='FishLarvae')
-            sigma_bs_median[:,cod_index[0][0]] = f(freqs)
-            ci_boot[0,:,cod_index[0][0]] = f_ci1(freqs)
-            ci_boot[1,:,cod_index[0][0]] = f_ci2(freqs)
+            sigma_bs_median[:,cod_index[0][0]] = cod_sigbs_ve
+            ci_boot[0,:,cod_index[0][0]] = cod_ci_ve[0,:]
+            ci_boot[1,:,cod_index[0][0]] = cod_ci_ve[1,:]
         else:
-            sigma_bs_median = np.vstack((sigma_bs_median.T,[f(freqs)]))
+            sigma_bs_median = np.concatenate((sigma_bs_median.T,cod_sigbs_ve.T),axis=0)
             ci1_boot = ci_boot[0,:,:]
             ci2_boot = ci_boot[1,:,:]
-            ci1_boot = np.vstack((ci1_boot.T,[f_ci1(freqs)]))
-            ci2_boot = np.vstack((ci2_boot.T,[f_ci2(freqs)]))
+            ci1_boot = np.vstack((ci1_boot.T,[cod_ci_ve[0,:]]))
+            ci2_boot = np.vstack((ci2_boot.T,[cod_ci_ve[1,:]]))
             sigma_bs_median = sigma_bs_median.T
             ci_boot = np.array([ci1_boot.T, ci2_boot.T])
             specs = np.append(specs,'Fish larvae')
         
         
         
-        lima_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_limacina.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
+        lima_scat = pd.read_csv('../ViscousElasticModel/ve_results/ve_simulations_limacina_15072022.txt', header=None, delimiter=' ', names=['frequency', 'TS'], skiprows=1)
         lima_scat['sigbs'] = 10**(lima_scat['TS']/10)
         lima_sigbs_ve = lima_scat.groupby(["frequency"]).agg({'sigbs':'median'})
         median, lima_ci_ve = bootstrap_interval(lima_scat, spec=False, percentiles=percentiles)
         freqs_lima = lima_scat['frequency'].unique()/1000
         #resample frequency and append or replace   
-        f = UnivariateSpline(freqs_lima,lima_sigbs_ve, k=5)  
-        f_ci1 = UnivariateSpline(freqs_lima,lima_ci_ve[0,:], k=5)
-        f_ci2 = UnivariateSpline(freqs_lima,lima_ci_ve[1,:], k=5)
+        #f = UnivariateSpline(freqs_lima,lima_sigbs_ve, k=5)  
+        #f_ci1 = UnivariateSpline(freqs_lima,lima_ci_ve[0,:], k=5)
+        #f_ci2 = UnivariateSpline(freqs_lima,lima_ci_ve[1,:], k=5)
 
         # Check if this species is already accounted for in lengths and shape of preallocated result matrices.
         # If yes, put the data where it belongs. If not append!
         if (specs=='Pteropod').any():
             lima_index = np.where(specs=='Pteropod')
-            sigma_bs_median[:,lima_index[0][0]] = f(freqs)
-            ci_boot[0,:,lima_index[0][0]] = f_ci1(freqs)
-            ci_boot[1,:,lima_index[0][0]] = f_ci2(freqs)
+            sigma_bs_median[:,lima_index[0][0]] = lima_sigbs_ve
+            ci_boot[0,:,lima_index[0][0]] = lima_ci_ve[0,:]
+            ci_boot[1,:,lima_index[0][0]] = lima_ci_ve[1,:]
         else:                    
-            sigma_bs_median = np.vstack((sigma_bs_median.T,[f(freqs)]))
+            sigma_bs_median = np.concatenate((sigma_bs_median.T,lima_sigbs_ve.T),axis=0)
             ci1_boot = ci_boot[0,:,:]
             ci2_boot = ci_boot[1,:,:]
-            ci1_boot = np.vstack((ci1_boot.T,[f_ci1(freqs)]))
-            ci2_boot = np.vstack((ci2_boot.T,[f_ci2(freqs)]))
+            ci1_boot = np.vstack((ci1_boot.T,[lima_ci_ve[0,:]]))
+            ci2_boot = np.vstack((ci2_boot.T,[lima_ci_ve[1,:]]))
             sigma_bs_median = sigma_bs_median.T
             ci_boot = np.array([ci1_boot.T, ci2_boot.T])
             specs = np.append(specs,'Pteropods')                                         
