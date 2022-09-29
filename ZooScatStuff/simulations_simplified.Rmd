@@ -97,7 +97,7 @@ pm = data.frame(species=c('Copepods','Euphausiid larvae', 'Amphipods'),
   theta_dist = 'rnorm',
   theta_mean = c(90, 20,    0),
   theta_sd =   c(30, 20,   30),
-  rho_l =    c(  3,   3,    12),
+  rho_l =    c(  3,   3,    15),
   taper =    c(  2,   4,    5) #taper =2 L/a>2 prolate spheroid, others selected from ZooScat Ex.
 )
 ```
