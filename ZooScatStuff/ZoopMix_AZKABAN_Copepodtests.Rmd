@@ -1,0 +1,314 @@
+---
+title: "ZoopMix_AZKABAN_Copepodtests"
+author: "Muriel Dunn"
+date: '2022-05-19'
+output: html_document
+---
+
+
+```{r setup, warning=FALSE, message=FALSE}
+# tidyverse for cleaner code
+library(tidyr)
+library(dplyr)
+library(purrr)
+#apply with progress
+library(pbapply)
+
+#plotting
+library(ggplot2)
+
+#special libraries
+library(ZooScatR)
+
+
+#pdf stuff
+library(kableExtra)
+library(knitr)
+
+#exporting results
+library(feather)
+
+#define if simulations should be multi-threadded. THis will run the simulations in parallel using with # cores available -1
+runParallel = TRUE
+if (runParallel == TRUE){
+  library(foreach)
+  library(doParallel)
+  
+  registerDoParallel(parallel::detectCores()-1)
+}
+#force running a new simulation, even if an RDS file with simualtions is available
+force=TRUE
+#set working dir
+setwd('C:\\Users\\mbd\\phd\\ZooScatStuff\\')
+```
+## AZKABAN population 
+
+Copepods, euphausiids, and chaetognaths were the dominant species groups during the zooplankton mix experiment. The model-informed classification of chaetognaths, euphausiids and jellyfish match their modelled target spectra quite well (visually assessed). However, the copepods are a poor match, even though the modelled response (using Kogeler 1987 values) is mostly seperated in magnitude from the other modeled target spectra. The SED from the experiment had few detections below -105 dB which is where most of the copepod modelled spectra was.
+
+In this notebook, we test different g and h litterature values for copepods to see if we can get a stronger target spectra. Then if possible we can try the modelled informed classification again with these values.
+
+## Model definition  
+
+Let's start by loading some standard values for the model:  
+
+```{r setdir, warning=FALSE, message=FALSE}
+#number of simulations
+nsim = 1000
+#location of the standard parameter file contained within the package
+fname <- paste0(system.file(package="ZooScatR"),"/extdata/configs/config_0.dat")
+# read the parameters file
+para = ZooScatR::read_para(fname)
+#set the soundspeed in the surrounding sea water
+misc <- list(cw=1448.01)
+#let's set the start and end frequencies
+f0=40 #will bepara$simu$var0
+f1=383 #will be para$simu$var1
+# number of output frequencies
+nf=687 #will be para$simu$n
+
+```
+
+For the shape parameters and file, there were no changes from the other model runs because these have been measured using photographs of a preserved sample taken hours before the experimental sample.
+
+We focus on assessing the variability in the model results given the use of different litterature values for g and h.
+
+A summary of the settings is defined in table 1.
+Kogeler et al., 1987 was selected for the study becayse it is from a similar time of year and northern location (Tromsø) but the measurements are from Calanus (a mix of C. hyperborius and C. finmarchicus) where as we had mainly Calanus glacialis.
+Next we selected Chu and Wiebe (2005) values to compare. These measurements were done in an environment with similar water temperature (-1 degC- 2 degC) but Antarctica (68 degS, 74 degW), and of a comparable length (3 mm)  they had two sets of measurements for "mostly" Calanus which reported very different h values so we try both May 2 (Copepods_Chu2005a) and May 17 (Copepods_Chu2005b).
+We also compare with Smith et al., 2010 however this study is from larger species (~8 mm) and were identified as Neocalanus sp, they found a large range of values, positively (g<1) and negatively (g>1) buoyant copepods.This is a different genus, species and animal size.
+
+
+
+```{r model_set, warning=FALSE, message=FALSE}
+pm = data.frame(species=c('Copepods_K1987','Copepods_Chu2005a','Copepods_Chu2005b','Copepods_Smith2010'),
+  L_dist=c('rnorm', 'rnorm','rnorm','rnorm'),
+  L_shape =  c(3.3, 3.3, 3.3, 3.3),
+  L_rate =   c(0.7, 0.7,  0.7, 0.7),
+  L_a_dist = c('rnorm'),
+  L_a_mean = c(5.3, 5.3, 5.3, 5.3),
+  L_a_sd =   c(0.9, 0.9, 0.9, 0.9),
+  g_dist = 'rnorm',
+  g_mean = c(0.997, 0.995, 0.996, 1.005),
+  g_sd   = c(0.005, 0.001, 0.001, 0.006),
+  h_dist = 'rnorm',
+  h_mean = c(1.027, 0.959, 1.012, 1.007),
+  h_sd   = c(0.005, 0.01, 0.003, 0.004),
+  theta_dist = 'rnorm',
+  theta_mean = c(90, 90, 90, 90),
+  theta_sd =   c(30, 30, 30, 30),
+  rho_l =    c(  3,   3,  3, 3),
+  taper =    c(  2,   2,  2, 2) #taper =2 L/a>2 prolate spheroid, others selected from ZooScat Ex.
+)
+```
+  
+```{r table, echo=FALSE}
+knitr::kable(pm[,1:7], booktabs = T, linesep = "") %>%
+kable_styling(latex_options = "striped")
+
+knitr::kable(pm[,c(1,8:13)], booktabs = T, linesep = "") %>%
+kable_styling(latex_options = "striped")
+
+knitr::kable(pm[,c(1,14:18)], booktabs = T, linesep = "") %>%
+kable_styling(latex_options = "striped")
+
+```
+
+### Define the Model parameters
+
+Now that we have lists of settings we can set those in the parameter files for each species group.  
+
+#### Copepods (Calanus finmarchicus CV)
+
+```{r get_para, warning=FALSE, message=FALSE}
+######################################################################
+#create a get_para funciton
+get_para <- function(pm,spec,fn=-1){
+
+pmsel = pm%>%filter(species==spec)
+  if(pmsel$L_dist=='rnorm'){
+          L = do.call(pmsel$L_dist,list(nsim,mean=pmsel$L_shape,sd=pmsel$L_rate))
+    }else if (pmsel$L_dist=='rlnorm'){
+          L = do.call(pmsel$L_dist,list(nsim,meanlog=pmsel$L_shape,sdlog=pmsel$L_rate))
+    }else{
+          L = do.call(pmsel$L_dist,list(nsim,shape=pmsel$L_shape,rate=pmsel$L_rate))
+  }
+  cp = data.frame(species=spec,
+  L=L,
+  La=do.call(pmsel$L_a_dist, list(nsim, pmsel$L_a_mean, pmsel$L_a_sd)),
+  g=do.call(pmsel$g_dist,list(nsim, pmsel$g_mean, pmsel$g_sd)),
+  h=do.call(pmsel$h_dist,list(nsim, pmsel$h_mean, pmsel$h_sd)),
+  taper=pmsel$taper,
+  rhol=pmsel$rho_l,
+  pf=fn,
+  theta=do.call(pmsel$theta_dist,list(nsim, pmsel$theta_mean, pmsel$theta_sd)))
+  cdf = gather(cp,'var','value',-species,-taper, -rhol,-pf)
+  subtit <- c('L' = "Length~(mm)",
+  'La' = "L/a",
+  'g' ="Density~contrast~g",
+  'h' = 'Sound~speed~contrast~h',
+  'theta' = 'Angle~theta~(degree)' )
+  p <- ggplot(data=cdf, aes(x=value))+
+  geom_density()+
+  facet_wrap(.~var, scales='free')+#, labeller =labeller(var= as_labeller(subtit, label_parsed)))+
+  theme_classic()+
+  ggtitle(paste(spec,'- Material properties - Density plots'))+
+  xlab('')+ylab('')
+
+  return(list(cp,p))
+}
+##################################################################
+#set copepod settings
+#fn = paste0(system.file(package="ZooScatR"),"/extdata/profiles/copepod0.dat")
+fn = 'cop0.sat'
+fn = 'Shapes/Copepod_KB3_TT_150122_0134.sat'
+
+# Kogeler 1987
+cout = get_para(pm, 'Copepods_K1987', fn)
+cdfa = cout[[1]]
+cout[[2]]
+
+# Chu 2005a
+cout = get_para(pm, 'Copepods_Chu2005a', fn)
+cdfb = cout[[1]]
+cout[[2]]
+
+# Chu 2005b
+cout = get_para(pm, 'Copepods_Chu2005b', fn)
+cdfc = cout[[1]]
+cout[[2]]
+
+# Smith 2005
+cout = get_para(pm, 'Copepods_Smith2010', fn)
+cdfd = cout[[1]]
+cout[[2]]
+```
+
+
+### Run the model
+
+Now we can combine all the settings and prepare to run the simulations:
+
+```{r combSettings, warning=FALSE, message=FALSE}
+setdf = do.call('rbind',list(cdfa,cdfb,cdfc, cdfd))
+set_para <- function(i, shape=FALSE, setdf=setdf){
+  para = ZooScatR::read_para(fname)
+  #let's set the start and end frequencies
+  para$simu$var0=f0
+  para$simu$var1=f1
+  #number of output frequencies
+  para$simu$n=nf
+  para$shape$L = setdf$L[i]
+  para$shape$L_a = setdf$La[i]
+  para$phy$g0 = setdf$g[i]
+  para$phy$h0 = setdf$h[i]
+  para$shape$order = setdf$taper[i]
+  para$shape$rho_L = setdf$rhol[i]
+  para$shape$prof_name = setdf$pf[i]
+  para$orient$angm = setdf$theta[i]
+  
+  if(shape==FALSE){
+    res = ZooScatR::bscat(para=para, misc=misc) #Target strength vs Frequency
+    tmp=data.frame(TS=res$y,
+    freq=seq(f0,f1, length.out = nf),
+    L=para$shape$L,
+    la=para$shape$L_a,
+    g=para$phy$g0,
+    h=para$phy$h0,
+    orient=para$orient$angm,
+    spec=setdf$species[i])
+    return(tmp)
+    
+  }else{
+    p = ZooScatR::buildpos(para)
+    p = p$plot
+    p = p+coord_equal()
+    p = p+ggtitle(setdf$species[i])
+    print(p)
+    return(p)
+  }
+}
+
+```
+
+### Model input shapes
+
+First let’s have a look at the selected shapes:
+
+```{r showShapes, fig.height=4,fig.width=8, warning=FALSE, message=FALSE}
+specp = setdf%>%group_by(species)%>%filter(row_number()==1)
+for(i in 1:length(specp$species)){set_para(i,shape=TRUE, setdf=specp)}
+```
+
+Now we can run the simulations:
+
+```{r runSIm, warning=FALSE, message=FALSE}
+if(force ==FALSE & file.exists('sim2.RDS')){
+  message(Sys.time(), ': Found simulations...Using old simulations...')
+  sim = readRDS('sim2.RDS')
+}else{
+message(Sys.time(),': Running simulations...')
+if(runParallel == TRUE){
+sim = foreach(i=1:length(setdf$L), .combine=rbind) %dopar% {set_para(i, shape=FALSE,setdf=setdf)}
+}else{
+sim = do.call('rbind',
+pbapply(matrix(1:length(setdf$L)),1,function(i){set_para(i, shape=FALSE,setdf=setdf)})
+)
+}
+message(Sys.time(),': Running simulations completed!')
+saveRDS(sim, file='sim2.RDS', compress=TRUE)
+}
+```
+  
+Let's have a look at the results.
+
+Let's plot TS grouped by species vs Length:
+  
+```{r fig.width=12, fig.height=12}
+plot_func <- function(sim, name='L (mm)', var='L', y='TS',x='freq', title) {
+  ggplot(data = sim, aes_string(x = x, y = y, col = var)) +
+    geom_point(size=0.01) +
+    scale_colour_viridis_c(name=name)+
+    ggtitle(title)+
+    xlab('Frequency (kHz)')+
+    ylab('TS (dB)')+
+    theme_classic()
+}
+pL <- function(sim,spec){plot_func(sim, name='L (mm)', var='L', y='TS',x='freq', spec)}
+
+sim_tmp <- sim %>% 
+  group_by(spec) %>% 
+  nest() %>% 
+  mutate(plots = map2(data, spec, pL))
+pL = gridExtra::grid.arrange(grobs = sim_tmp$plots)
+```
+
+
+To have a look at the overall distribution, we can also look at 2D density plots:  
+
+```{r fig.width=12, fig.height=12}
+pL <- function(sim, title){
+
+  ggplot(data=sim, aes(x=freq, y=TS))+
+    geom_density2d_filled()+
+    #facet_wrap(.~spec, scales='free')+
+    scale_x_continuous(expand=c(0,0))+
+    scale_y_continuous(expand=c(0,0))+
+    ggtitle(title)+
+    theme_classic()
+}
+
+
+sim_tmp <- sim%>% 
+  group_by(spec) %>% 
+  nest() %>% 
+  mutate(plots = map2(data, spec, pL))
+pL = gridExtra::grid.arrange(grobs = sim_tmp$plots)
+```
+
+
+```{r export-feather}
+path <- "AZKABAN_ZoopMix_Copepodtests.feather"
+write_feather(sim, path)
+
+
+```
