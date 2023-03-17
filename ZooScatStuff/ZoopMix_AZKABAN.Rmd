@@ -51,7 +51,7 @@ Let's start by loading some standard values for the model:
 
 ```{r setdir, warning=FALSE, message=FALSE}
 #number of simulations
-nsim = 10000
+nsim = 1000
 #location of the standard parameter file contained within the package
 fname <- paste0(system.file(package="ZooScatR"),"/extdata/configs/config_0.dat")
 # read the parameters file
@@ -59,10 +59,18 @@ para = ZooScatR::read_para(fname)
 #set the soundspeed in the surrounding sea water
 misc <- list(cw=1448.01)
 #let's set the start and end frequencies
-f0=185 #will bepara$simu$var0
-f1=383 #will be para$simu$var1
+# Full bandwidth
+#f0=40 #will bepara$simu$var0
+#f1=383 #will be para$simu$var1
 # number of output frequencies
-nf=397 #will be para$simu$n
+#nf=687 #will be para$simu$n
+
+# Experimental bandwdith
+f0=185 #will bepara$simu$var0
+f1=255 #will be para$simu$var1
+# number of output frequencies
+nf=2*(f1-f0)+1 #will be para$simu$n
+
 
 ```
 
@@ -80,11 +88,11 @@ pm = data.frame(species=c('Copepods','Euphausiids','Chaetognaths','Jellyfish'),
   L_a_mean = c(5.3, 11, 26, 2.8),
   L_a_sd =   c(0.9,  2, 8, 0.5),
   g_dist = 'rnorm',
-  g_mean = c(1.025/1.0281,1.037, 1.03, 1.007),
-  g_sd = c(0.005,0.005, 0.005, 0.005),
+  g_mean = c(0.995,1.037, 1.03, 1.007),
+  g_sd   = c(0.001,0.005, 0.005, 0.005),
   h_dist = 'rnorm',
-  h_mean = c(1.027,1.026, 1.03, 1.007),
-  h_sd = c(0.005,0.005, 0.005, 0.005),
+  h_mean = c(0.959,1.026, 1.03, 1.007),
+  h_sd   = c(0.01,0.005, 0.005, 0.005),
   theta_dist = 'rnorm',
   theta_mean = c(90, 20,    0, 90),
   theta_sd =   c(30, 20,   30, 30),
@@ -316,7 +324,7 @@ pL = gridExtra::grid.arrange(grobs = sim_tmp$plots)
 
 
 ```{r export-feather}
-path <- "AZKABAN_ZoopMix_data_TenThousand.feather"
+path <- "AZKABAN_ZoopMix_data_newcopepod.feather"
 write_feather(sim, path)
 
 
