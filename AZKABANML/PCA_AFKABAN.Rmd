@@ -1,0 +1,96 @@
+---
+title: "PCA_AFKABAN"
+author: "Muriel Dunn"
+date: "2023-04-12"
+output: html_document
+---
+
+```{r setup, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#tidyverse for cleaner code
+library(tidyr)
+library(tidyverse)
+library(dplyr)
+library(purrr)
+library(feather)
+library(vegan)
+library(arrow)
+library(fBasics)
+```
+
+## Clusters on broadband spectra
+In this document I do a PCA to find the driving factor of the different clusters per species from AFKABAN experiments
+
+## Prepped dataframes
+
+Data from AFKABAN experiments are extracted into a dataframe in python (cluster_spectra.)
+
+```{r data, warning=FALSE, message=FALSE}
+a_cod120 = arrow::read_feather("./a_cod120pca.feather")
+a_cod200 = arrow::read_feather("./a_cod200pca.feather")
+
+p_cod120 = arrow::read_feather("./p_cod120pca.feather")
+p_cod200 = arrow::read_feather("./p_cod200pca.feather")
+
+p2_cod120 = arrow::read_feather("./p2_cod120pca.feather")
+p2_cod200 = arrow::read_feather("./p2_cod200pca.feather")
+```
+
+## Run PCA
+
+Write wrapper function to run PCA on normalize and centered data and plot results
+
+```{r run_pca, warning=FALSE, message=FALSE}
+######################################################################
+#create a function to run pca and plot
+run_pca <- function(data){
+data_pca = princomp(data %>% select(2:last_col(1)), cor=T) # Cor standardizes data
+
+summary(data_pca)
+
+biplot(data_pca)
+
+# Contruct biplot
+colors = c("green", "blue", "red", "purple", "orange")
+color_array = colors[data$y_kmean-min(data$y_kmean)+1]
+
+plot(data_pca$scores[,1], data_pca$scores[,2],xlab="PCI",ylab="PCII", type="n") 
+points(data_pca$scores[,1], data_pca$scores[,2],cex=1, col=color_array)# add color for different clusters
+for (i in 1:length(data_pca$loadings[,1])){lines(c(0,data_pca$loadings[i,1]),c(0,data_pca$loadings[i,2]))}
+text(data_pca$loadings[,1],data_pca$loadings[,2],labels=colnames(data %>% select(2:last_col(1))),cex=1.5,col="black")
+return(data_pca)
+
+}
+##################################################################
+```
+
+```{r pca_acod, warning=FALSE, message=FALSE}
+a_cod120_pca <- run_pca(a_cod120) 
+summary(a_cod120_pca)
+```
+
+## Run for 200
+
+```{r pca_200, warning=FALSE, message=FALSE}
+a_cod200_pca <- run_pca(a_cod200) 
+summary(a_cod200_pca)
+```
+## Run PCA on both polar cod experiments
+```{r p_pca_120, warning=FALSE, message=FALSE}
+p_cod120_pca <- run_pca(p_cod120) 
+summary(p_cod120_pca)
+```
+
+```{r p_pca_200, warning=FALSE, message=FALSE}
+p_cod200_pca <- run_pca(p_cod200) 
+summary(p_cod200_pca)
+```
+```{r p2_pca_120, warning=FALSE, message=FALSE}
+p2_cod120_pca <- run_pca(p2_cod120) 
+summary(p2_cod120_pca)
+```
+
+```{r p2_pca_200, warning=FALSE, message=FALSE}
+p2_cod200_pca <- run_pca(p2_cod200) 
+summary(p2_cod200_pca)
+``````
