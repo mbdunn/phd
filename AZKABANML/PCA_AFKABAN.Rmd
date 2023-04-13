@@ -44,7 +44,7 @@ Write wrapper function to run PCA on normalize and centered data and plot result
 ######################################################################
 #create a function to run pca and plot
 run_pca <- function(data){
-data_pca = princomp(data %>% select(2:last_col(1)), cor=T) # Cor standardizes data
+data_pca = princomp(scale(data %>% select(2:last_col(1))), cor=T) # Cor standardizes data
 
 summary(data_pca)
 
