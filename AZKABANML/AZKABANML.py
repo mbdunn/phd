@@ -10,7 +10,7 @@ from sklearn.metrics import f1_score, confusion_matrix
 #from sklearn.neighbors import KNeighborsClassifier
 import hyperopt
 from hyperopt import tpe
-from hpsklearn import HyperoptEstimator, k_neighbors_classifier, svc, lightgbm_classification, gaussian_nb
+from hpsklearn import HyperoptEstimator, k_neighbors_classifier, svc, lightgbm_classification, gaussian_nb, any_preprocessing
 import lightgbm
 from datetime import timedelta, date
 from tenacity import retry, stop_after_attempt
@@ -18,8 +18,8 @@ from tenacity import retry, stop_after_attempt
 import sys, errno  
 
 
-@retry(stop=stop_after_attempt(retry_limit))
-def nested_cv(X, y, model, n_splits, n_folds, unique_id):
+@retry(stop=stop_after_attempt(10))
+def nested_cv(X, y, model, n_splits, n_folds, unique_id, le, path):
     
     """
     This function performs nested cross-validation with Bayesian hyperparameter
@@ -42,7 +42,6 @@ def nested_cv(X, y, model, n_splits, n_folds, unique_id):
         unique_id: Unique name string for file output path
     Written by Chelsey McGowan-Yallop
     """
-    
     cv = StratifiedKFold(n_splits=n_splits,
                          shuffle=True,
                          random_state=42) # Outer CV
@@ -50,7 +49,7 @@ def nested_cv(X, y, model, n_splits, n_folds, unique_id):
     i_start = 0
     i_list = []
     results_df = None
-    cv_path = classifypath + unique_id + '_NestedCV.pkl'
+    cv_path = path + unique_id + '_NestedCV.pkl'
         
     if os.path.isfile(cv_path) == True: # If CV is incomplete, resume
         results_df = pd.read_pickle(cv_path)
@@ -150,12 +149,21 @@ def f1_loss(y_true, y_pred):
     """
     return 1.0 - f1_score(y_true, y_pred, average='weighted')
 
-def main_classify(X, y, clf, unique_id, preprocessing, path=classifypath):
+def main_classify(df, clf, unique_id,path, preprocessing=[],  ex_preprocessing=[], timeout=300, n_jobs=-1, max_evals=50, n_splits = 10,
+n_folds = 10):
     """
     Function to run nested cross validation then apply fit to whole dataset
     Uses F1 score instead of accuracy score, as the latter is inappropriate
     for multi-class classification.
     """
+    
+    # -- WRANGLE DATA ---------------------------------------------------------
+    df_np = df.to_numpy()
+    le = LabelEncoder() # Maps labels -> int (e.g. Atlantic cod -> 0, Polar cod -> 1)
+    df['Species_le'] = le.fit_transform(df.Species)
+    X = df_np[:,:-2] # Features, TS(f) only
+    y = df['Species_le'].to_numpy() # Labels
+
 
     # -- NESTED CROSS-VALIDATION ----------------------------------------------
 
@@ -169,7 +177,7 @@ def main_classify(X, y, clf, unique_id, preprocessing, path=classifypath):
                               n_jobs = n_jobs)
     model
 
-    nested_cv(X, y, model, n_splits, n_folds, unique_id)
+    nested_cv(X, y, model, n_splits, n_folds, unique_id, le, path)
 
     # -- RETRAIN MODEL --------------------------------------------------------
 
@@ -189,3 +197,33 @@ def main_classify(X, y, clf, unique_id, preprocessing, path=classifypath):
     with open(path + unique_id + '_BestParams.pkl', 'wb') as handle:
         pickle.dump(model.best_model(), handle)
     return
+
+def print_F1_mean(classifier):
+    cv_df = classifier['cv_df']
+    
+    print('Mean class-weighted F1 score for : '
+          + str(round(cv_df.Outer_score.mean(), 2))
+          + ' ± '
+          + str(round(cv_df.Outer_score.std(), 2)))
+
+    mean_class_scores = np.mean(np.vstack(cv_df.Outer_unweighted_scores.values), axis=0)
+    std_class_scores = np.std(np.vstack(cv_df.Outer_unweighted_scores.values), axis=0)
+
+    for i, species in enumerate(cv_df.Outer_unweighted_score_labels.values[0]):
+        print('Mean F1 score for ' + species + ': '
+             + str(round(mean_class_scores[i], 2))
+             + ' ± '
+             + str(round(std_class_scores[i], 2)))
+        
+def read_results(unique_id ,pathh):
+    ' read the classifier results and predictions from the selected classifier'
+    
+    main_path = f'{classifypath}/{unique_id}'
+    cv_path = '_NestedCV.pkl'
+    best_params = '_BestParams.pkl'
+
+    # Load dataframes
+    cv_df = pd.read_pickle(main_path + cv_path) # Nested CV results
+    best_params = pd.read_pickle(main_path + best_params)
+
+    return {'name':classifier, 'cv_df':cv_df, 'best_params':best_params}
