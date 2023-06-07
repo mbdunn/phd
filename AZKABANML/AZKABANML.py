@@ -215,7 +215,7 @@ def print_F1_mean(classifier):
              + ' ± '
              + str(round(std_class_scores[i], 2)))
         
-def read_results(unique_id ,pathh):
+def read_results(unique_id ,classifypath):
     ' read the classifier results and predictions from the selected classifier'
     
     main_path = f'{classifypath}/{unique_id}'
@@ -226,4 +226,71 @@ def read_results(unique_id ,pathh):
     cv_df = pd.read_pickle(main_path + cv_path) # Nested CV results
     best_params = pd.read_pickle(main_path + best_params)
 
-    return {'name':classifier, 'cv_df':cv_df, 'best_params':best_params}
+    return {'name':unique_id, 'cv_df':cv_df, 'best_params':best_params}
+
+
+def main_classify_test(df, df_new, clf, unique_id,path, preprocessing=[],  ex_preprocessing=[], timeout=300, n_jobs=-1, max_evals=50, n_splits = 10, n_folds = 10):
+    """
+    Function to run nested cross validation then apply fit to whole dataset
+    Uses F1 score instead of accuracy score, as the latter is inappropriate
+    for multi-class classification.
+    """
+    
+    # -- WRANGLE DATA ---------------------------------------------------------
+    df_np = df.to_numpy()
+    le = LabelEncoder() # Maps labels -> int (e.g. Atlantic cod -> 0, Polar cod -> 1)
+    df['Species_le'] = le.fit_transform(df.Species)
+    X = df_np[:,:-2] # Features, TS(f) only
+    y = df['Species_le'].to_numpy() # Labels
+    
+# -- WRANGLE TEST DATA ---------------------------------------------------------
+    df_np_new = df_new.to_numpy()
+    measured_X = df_np_new
+
+
+    # -- NESTED CROSS-VALIDATION ----------------------------------------------
+
+    model = HyperoptEstimator(classifier = clf,
+                              preprocessing = preprocessing,
+                              ex_preprocs = ex_preprocessing,
+                              algo = tpe.suggest,
+                              trial_timeout = timeout,
+                              #loss_fn = f1_loss,
+                              max_evals = max_evals,
+                              n_jobs = n_jobs)
+    model
+
+    nested_cv(X, y, model, n_splits, n_folds, unique_id, le, path)
+
+    # -- RETRAIN MODEL --------------------------------------------------------
+
+    print('Retraining model on full dataset')
+
+    model = HyperoptEstimator(classifier = clf,
+                              preprocessing = preprocessing,
+                              ex_preprocs = ex_preprocessing,
+                              algo = tpe.suggest,
+                              trial_timeout = timeout,
+                              #loss_fn = f1_loss,
+                              max_evals = max_evals,
+                              n_jobs = n_jobs)
+
+    model.fit(X, y, n_folds=n_folds, cv_shuffle=True)
+    
+
+    # -- PREDICT CLASSES FOR NEW DATA -----------------------------------------
+
+    print('Classifying new data')
+
+    y_pred = model.predict(measured_X) # Predict classes for measured TS(f)
+    y_pred = le.inverse_transform(y_pred) # Transform labels back to species
+
+    # -- OUTPUT RESULTS -------------------------------------------------------
+
+    measured_df['Prediction'] = y_pred
+    measured_df.to_pickle(unique_id + '_Predictions.pkl')
+
+
+    with open(path + unique_id + '_BestParams.pkl', 'wb') as handle:
+        pickle.dump(model.best_model(), handle)
+    return
