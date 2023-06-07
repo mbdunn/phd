@@ -149,7 +149,7 @@ def f1_loss(y_true, y_pred):
     """
     return 1.0 - f1_score(y_true, y_pred, average='weighted')
 
-def main_classify(df, clf, unique_id,path, preprocessing=[],  ex_preprocessing=[], timeout=300, n_jobs=-1, max_evals=50, n_splits = 10,
+def main_classify(df, clf, unique_id,path, preprocessing=[],  ex_preprocessing=[], timeout=300, n_jobs=-1, max_evals=10, n_splits = 10,
 n_folds = 10):
     """
     Function to run nested cross validation then apply fit to whole dataset
@@ -161,7 +161,7 @@ n_folds = 10):
     df_np = df.to_numpy()
     le = LabelEncoder() # Maps labels -> int (e.g. Atlantic cod -> 0, Polar cod -> 1)
     df['Species_le'] = le.fit_transform(df.Species)
-    X = df_np[:,:-2] # Features, TS(f) only
+    X = df_np[:,:-1] # Features, TS(f) only
     y = df['Species_le'].to_numpy() # Labels
 
 
@@ -221,12 +221,14 @@ def read_results(unique_id ,classifypath):
     main_path = f'{classifypath}/{unique_id}'
     cv_path = '_NestedCV.pkl'
     best_params = '_BestParams.pkl'
+    pred_path = '_Predictions.pkl'
 
     # Load dataframes
     cv_df = pd.read_pickle(main_path + cv_path) # Nested CV results
     best_params = pd.read_pickle(main_path + best_params)
+    pred_df = pd.read_pickle(main_path+pred_path)
 
-    return {'name':unique_id, 'cv_df':cv_df, 'best_params':best_params}
+    return {'name':unique_id, 'cv_df':cv_df, 'best_params':best_params,  'pred_df':pred_df,}
 
 
 def main_classify_test(df, df_new, clf, unique_id,path, preprocessing=[],  ex_preprocessing=[], timeout=300, n_jobs=-1, max_evals=50, n_splits = 10, n_folds = 10):
@@ -240,12 +242,11 @@ def main_classify_test(df, df_new, clf, unique_id,path, preprocessing=[],  ex_pr
     df_np = df.to_numpy()
     le = LabelEncoder() # Maps labels -> int (e.g. Atlantic cod -> 0, Polar cod -> 1)
     df['Species_le'] = le.fit_transform(df.Species)
-    X = df_np[:,:-2] # Features, TS(f) only
+    X = df_np[:,:-1] # Features, TS(f) only
     y = df['Species_le'].to_numpy() # Labels
     
 # -- WRANGLE TEST DATA ---------------------------------------------------------
-    df_np_new = df_new.to_numpy()
-    measured_X = df_np_new
+    measured_X = df_new
 
 
     # -- NESTED CROSS-VALIDATION ----------------------------------------------
@@ -285,10 +286,11 @@ def main_classify_test(df, df_new, clf, unique_id,path, preprocessing=[],  ex_pr
     y_pred = model.predict(measured_X) # Predict classes for measured TS(f)
     y_pred = le.inverse_transform(y_pred) # Transform labels back to species
 
+   
     # -- OUTPUT RESULTS -------------------------------------------------------
 
-    measured_df['Prediction'] = y_pred
-    measured_df.to_pickle(unique_id + '_Predictions.pkl')
+    measured_X['Prediction'] = y_pred
+    measured_X.to_pickle(path + unique_id + '_Predictions.pkl')
 
 
     with open(path + unique_id + '_BestParams.pkl', 'wb') as handle:
