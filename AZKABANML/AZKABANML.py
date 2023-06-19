@@ -17,6 +17,91 @@ from tenacity import retry, stop_after_attempt
 
 import sys, errno  
 
+def tsf_targets_import(file_path):
+
+    """
+    This function imports wideband frequency response .csv files exported from
+    Echoview and performs some basic housekeeping.
+    
+    PARAMETERS:
+        file_path: Path to wideband frequency response .csv file from Echoview.
+        
+    RETURNS:
+        df: Pandas dataframe.
+    """
+    
+    def get_datetime(df, avg_flag):
+        """
+        Convert Echoview timestamps in imported .csv to datetime.
+        """
+        if avg_flag:
+            df['Ping_microseconds_start'] = df.Ping_millisecond_start * 1000
+            df['Ping_microseconds_start'] = [timedelta(microseconds = i) for i in df['Ping_microseconds_start']]
+            df['Datetime'] = df['Ping_date_start_Ping_time_start'] + df['Ping_microseconds_start']
+            df.drop(columns=['Ping_date_start_Ping_time_start',
+                             'Ping_millisecond_start',
+                             'Ping_microseconds_start'], 
+                    inplace=True)
+        
+        else:
+            df['Ping_microseconds'] = df.Ping_milliseconds * 1000
+            df['Ping_microseconds'] = [timedelta(microseconds = i) for i in df['Ping_microseconds']]
+            df['Datetime'] = df['Ping_date_Ping_time'] + df['Ping_microseconds']
+            df.drop(columns=['Ping_date_Ping_time',
+                             'Ping_milliseconds',
+                             'Ping_microseconds'],
+                    inplace=True)
+        
+        return df
+    
+    if "trackavg.csv" in file_path:
+        parse_cols = ['Ping_date_start', 'Ping_time_start']
+        ind_col = None
+        avg_flag = True
+        transpose = True
+    elif "target" in file_path:
+        parse_cols = ['Ping_date', 'Ping_time']
+        ind_col = None
+        avg_flag = False
+        transpose = False
+    else:
+        parse_cols = ['Ping_date', 'Ping_time']
+        ind_col = 'Target_index'
+        avg_flag = False
+        transpose = True
+        
+    if transpose:
+        transposed_path = file_path[:-4] + '_transposed.csv'
+        if os.path.isfile(transposed_path) == True:
+            df = pd.read_csv(transposed_path,
+                             index_col=ind_col,
+                             skiprows=1,
+                             skipfooter=2,
+                             engine='python',
+                             parse_dates=[parse_cols])
+        else:
+            df = pd.read_csv(file_path, low_memory=False).T
+            file_path = transposed_path
+            df.to_csv(path_or_buf=file_path)
+            print('A transposed TS(f) file was created at: \n' + str(file_path))    
+            df = pd.read_csv(file_path,
+                             index_col=ind_col,
+                             skiprows=1,
+                             skipfooter=2,
+                             engine='python',
+                             parse_dates=[parse_cols])
+    else:
+        df = pd.read_csv(file_path,
+                 index_col=ind_col,
+                 skiprows=0,
+                 skipfooter=2,
+                 engine='python',
+                 parse_dates=[parse_cols])
+    
+    df = get_datetime(df, avg_flag)
+    
+    return df
+
 
 @retry(stop=stop_after_attempt(10))
 def nested_cv(X, y, model, n_splits, n_folds, unique_id, le, path):
@@ -158,12 +243,12 @@ n_folds = 10):
     """
     
     # -- WRANGLE DATA ---------------------------------------------------------
-    df_np = df.to_numpy()
+    df_train = df.loc[:,:].copy()
+    
     le = LabelEncoder() # Maps labels -> int (e.g. Atlantic cod -> 0, Polar cod -> 1)
-    df['Species_le'] = le.fit_transform(df.Species)
-    X = df_np[:,:-1] # Features, TS(f) only
-    y = df['Species_le'].to_numpy() # Labels
-
+    df_train['Species_le'] = le.fit_transform(df_train.Species)
+    X = df_train.iloc[:,:-2].to_numpy() # Features, TS(f) only
+    y = df_train.loc[:,'Species_le'].to_numpy() # Labels
 
     # -- NESTED CROSS-VALIDATION ----------------------------------------------
 
@@ -172,7 +257,7 @@ n_folds = 10):
                               ex_preprocs = ex_preprocessing,
                               algo = tpe.suggest,
                               trial_timeout = timeout,
-                              #loss_fn = f1_loss,
+                              loss_fn = f1_loss,
                               max_evals = max_evals,
                               n_jobs = n_jobs)
     model
@@ -188,7 +273,7 @@ n_folds = 10):
                               ex_preprocs = ex_preprocessing,
                               algo = tpe.suggest,
                               trial_timeout = timeout,
-                              #loss_fn = f1_loss,
+                              loss_fn = f1_loss,
                               max_evals = max_evals,
                               n_jobs = n_jobs)
 
@@ -226,9 +311,9 @@ def read_results(unique_id ,classifypath):
     # Load dataframes
     cv_df = pd.read_pickle(main_path + cv_path) # Nested CV results
     best_params = pd.read_pickle(main_path + best_params)
-    pred_df = pd.read_pickle(main_path+pred_path)
+    #pred_df = pd.read_pickle(main_path+pred_path)
 
-    return {'name':unique_id, 'cv_df':cv_df, 'best_params':best_params,  'pred_df':pred_df,}
+    return {'name':unique_id, 'cv_df':cv_df, 'best_params':best_params}#,  'pred_df':pred_df,}
 
 
 def main_classify_test(df, df_new, clf, unique_id,path, preprocessing=[],  ex_preprocessing=[], timeout=300, n_jobs=-1, max_evals=50, n_splits = 10, n_folds = 10):
@@ -239,11 +324,12 @@ def main_classify_test(df, df_new, clf, unique_id,path, preprocessing=[],  ex_pr
     """
     
     # -- WRANGLE DATA ---------------------------------------------------------
-    df_np = df.to_numpy()
+    df_train = df.loc[:,:].copy()
+    
     le = LabelEncoder() # Maps labels -> int (e.g. Atlantic cod -> 0, Polar cod -> 1)
-    df['Species_le'] = le.fit_transform(df.Species)
-    X = df_np[:,:-1] # Features, TS(f) only
-    y = df['Species_le'].to_numpy() # Labels
+    df_train['Species_le'] = le.fit_transform(df_train.Species)
+    X = df_train.iloc[:,:-2].to_numpy() # Features, TS(f) only
+    y = df_train.loc[:,'Species_le'].to_numpy() # Labels
     
 # -- WRANGLE TEST DATA ---------------------------------------------------------
     measured_X = df_new
@@ -256,7 +342,7 @@ def main_classify_test(df, df_new, clf, unique_id,path, preprocessing=[],  ex_pr
                               ex_preprocs = ex_preprocessing,
                               algo = tpe.suggest,
                               trial_timeout = timeout,
-                              #loss_fn = f1_loss,
+                              loss_fn = f1_loss,
                               max_evals = max_evals,
                               n_jobs = n_jobs)
     model
@@ -272,7 +358,7 @@ def main_classify_test(df, df_new, clf, unique_id,path, preprocessing=[],  ex_pr
                               ex_preprocs = ex_preprocessing,
                               algo = tpe.suggest,
                               trial_timeout = timeout,
-                              #loss_fn = f1_loss,
+                              loss_fn = f1_loss,
                               max_evals = max_evals,
                               n_jobs = n_jobs)
 
@@ -296,3 +382,169 @@ def main_classify_test(df, df_new, clf, unique_id,path, preprocessing=[],  ex_pr
     with open(path + unique_id + '_BestParams.pkl', 'wb') as handle:
         pickle.dump(model.best_model(), handle)
     return
+
+def main_classify_test_old(df, df_new, clf, unique_id,path, preprocessing=[],  ex_preprocessing=[], timeout=300, n_jobs=-1, max_evals=50, n_splits = 10, n_folds = 10):
+    """
+    Function to run nested cross validation then apply fit to whole dataset
+    Uses F1 score instead of accuracy score, as the latter is inappropriate
+    for multi-class classification.
+    """
+    
+    # -- WRANGLE DATA ---------------------------------------------------------
+    df_train = df.loc[:,:].copy()
+    
+    le = LabelEncoder() # Maps labels -> int (e.g. Atlantic cod -> 0, Polar cod -> 1)
+    df_train['Species_le'] = le.fit_transform(df_train.Species)
+    X = df_train.iloc[:,:-2].to_numpy() # Features, TS(f) only
+    y = df_train.loc[:,'Species_le'].to_numpy() # Labels
+    
+# -- WRANGLE TEST DATA ---------------------------------------------------------
+    measured_X = df_new.copy()
+
+
+    # -- NESTED CROSS-VALIDATION ----------------------------------------------
+
+    model = HyperoptEstimator(classifier = clf,
+                              preprocessing = preprocessing,
+                              ex_preprocs = ex_preprocessing,
+                              algo = tpe.suggest,
+                              trial_timeout = timeout,
+                              loss_fn = f1_loss,
+                              max_evals = max_evals,
+                              n_jobs = n_jobs)
+    model
+
+    nested_cv(X, y, model, n_splits, n_folds, unique_id, le, path)
+
+    # -- RETRAIN MODEL --------------------------------------------------------
+
+    print('Retraining model on full dataset')
+
+    model = HyperoptEstimator(classifier = clf,
+                              preprocessing = preprocessing,
+                              ex_preprocs = ex_preprocessing,
+                              algo = tpe.suggest,
+                              trial_timeout = timeout,
+                              loss_fn = f1_loss,
+                              max_evals = max_evals,
+                              n_jobs = n_jobs)
+
+    model.fit(X, y, n_folds=n_folds, cv_shuffle=True)
+    
+
+    # -- PREDICT CLASSES FOR NEW DATA -----------------------------------------
+
+    print('Classifying new data')
+
+    y_pred = model.predict(measured_X) # Predict classes for measured TS(f)
+    y_pred = le.inverse_transform(y_pred) # Transform labels back to species
+
+   
+    # -- OUTPUT RESULTS -------------------------------------------------------
+
+    measured_X['Prediction'] = y_pred
+    measured_X.to_pickle(path + unique_id + '_Predictions.pkl')
+
+
+    with open(path + unique_id + '_BestParams.pkl', 'wb') as handle:
+        pickle.dump(model.best_model(), handle)
+    return
+
+
+def main_classify_all(df, df_SED, df_track, df_trackavg, clf, unique_id,path, preprocessing=[],  ex_preprocessing=[], timeout=300, n_jobs=-1, max_evals=50, n_splits = 10, n_folds = 10):
+    """
+    Function to run nested cross validation then apply fit to whole dataset
+    Uses F1 score instead of accuracy score, as the latter is inappropriate
+    for multi-class classification.
+    """
+    
+    # -- WRANGLE DATA ---------------------------------------------------------
+    df_train = df.loc[:,:].copy()
+    
+    le = LabelEncoder() # Maps labels -> int (e.g. Atlantic cod -> 0, Polar cod -> 1)
+    df_train['Species_le'] = le.fit_transform(df_train.Species)
+    X = df_train.iloc[:,:-2].to_numpy() # Features, TS(f) only
+    y = df_train.loc[:,'Species_le'].to_numpy() # Labels
+    
+# -- WRANGLE TEST DATA ---------------------------------------------------------
+    measured_XSED = df_SED.copy()
+    measured_Xtrack = df_track.copy()
+    measured_Xtrackavg = df_trackavg.copy()
+
+
+    # -- NESTED CROSS-VALIDATION ----------------------------------------------
+
+    model = HyperoptEstimator(classifier = clf,
+                              preprocessing = preprocessing,
+                              ex_preprocs = ex_preprocessing,
+                              algo = tpe.suggest,
+                              trial_timeout = timeout,
+                              loss_fn = f1_loss,
+                              max_evals = max_evals,
+                              n_jobs = n_jobs)
+
+    nested_cv(X, y, model, n_splits, n_folds, unique_id, le, path)
+
+    # -- RETRAIN MODEL --------------------------------------------------------
+
+    print('Retraining model on full dataset')
+
+    model = HyperoptEstimator(classifier = clf,
+                              preprocessing = preprocessing,
+                              ex_preprocs = ex_preprocessing,
+                              algo = tpe.suggest,
+                              trial_timeout = timeout,
+                              loss_fn = f1_loss,
+                              max_evals = max_evals,
+                              n_jobs = n_jobs)
+
+    model.fit(X, y, n_folds=n_folds, cv_shuffle=True)
+    
+
+    # -- PREDICT CLASSES FOR NEW DATA -----------------------------------------
+
+    print('Classifying new data')
+
+    y_predSED = model.predict(measured_XSED) # Predict classes for measured TS(f)
+    y_predSED = le.inverse_transform(y_predSED) # Transform labels back to species
+    
+    y_predtrack = model.predict(measured_Xtrack) # Predict classes for measured TS(f)
+    y_predtrack = le.inverse_transform(y_predtrack) # Transform labels back to species
+    
+    y_predtrackavg = model.predict(measured_Xtrackavg) # Predict classes for measured TS(f)
+    y_predtrackavg = le.inverse_transform(y_predtrackavg) # Transform labels back to species
+
+   
+    # -- OUTPUT RESULTS -------------------------------------------------------
+
+    measured_XSED['Prediction'] = y_predSED
+    measured_Xtrack['Prediction'] = y_predtrack
+    measured_Xtrackavg['Prediction'] = y_predtrackavg
+    measured_XSED.to_pickle(path + unique_id + '_Predictions_SED.pkl')
+    measured_Xtrack.to_pickle(path + unique_id + '_Predictions_track.pkl')
+    measured_Xtrackavg.to_pickle(path + unique_id + '_Predictions_trackavg.pkl')
+    
+
+
+    with open(path + unique_id + '_BestParams.pkl', 'wb') as handle:
+        pickle.dump(model.best_model(), handle)
+    return
+
+def read_results_all(unique_id ,classifypath):
+    ' read the classifier results and predictions from the selected classifier'
+    
+    main_path = f'{classifypath}/{unique_id}'
+    cv_path = '_NestedCV.pkl'
+    best_params = '_BestParams.pkl'
+    predSED_path = '_Predictions_SED.pkl'
+    predtrack_path = '_Predictions_track.pkl'
+    predtrackavg_path = '_Predictions_trackavg.pkl'
+
+    # Load dataframes
+    cv_df = pd.read_pickle(main_path + cv_path) # Nested CV results
+    best_params = pd.read_pickle(main_path + best_params)
+    predSED_df = pd.read_pickle(main_path+predSED_path)
+    predtrack_df = pd.read_pickle(main_path+predtrack_path)
+    predtrackavg_df = pd.read_pickle(main_path+predtrackavg_path)
+
+    return {'name':unique_id, 'cv_df':cv_df, 'best_params':best_params,  'predSED_df':predSED_df, 'predtrack_df':predtrack_df, 'predtrackavg_df':predtrackavg_df,}
