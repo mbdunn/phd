@@ -234,7 +234,7 @@ def f1_loss(y_true, y_pred):
     """
     return 1.0 - f1_score(y_true, y_pred, average='weighted')
 
-def main_classify(df, clf, unique_id,path, preprocessing=[],  ex_preprocessing=[], timeout=300, n_jobs=-1, max_evals=10, n_splits = 10,
+def main_classify(df, clf, unique_id,path, preprocessing=[],  ex_preprocessing=[], timeout=300, n_jobs=-1, max_evals=50, n_splits = 10,
 n_folds = 10):
     """
     Function to run nested cross validation then apply fit to whole dataset
